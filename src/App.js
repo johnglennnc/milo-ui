@@ -1,13 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { db } from './firebase';
+import {
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  doc,
+  arrayUnion
+} from 'firebase/firestore';
 
+function extractLabValues(text) {
+  const labs = {};
+  const lines = text.toLowerCase().split(/\n|\.|,/);
+  lines.forEach(line => {
+    const estr = line.match(/estradiol.*?(\d+)/);
+    if (estr) labs.estradiol = parseFloat(estr[1]);
+
+    const prog = line.match(/progesterone.*?(\d+(\.\d+)?)/);
+    if (prog) labs.progesterone = parseFloat(prog[1]);
+
+    const dhea = line.match(/dhea.*?(\d+)/);
+    if (dhea) labs.dhea = parseFloat(dhea[1]);
+  });
+  return labs;
+}
 
 function App() {
   const [messages, setMessages] = useState([]);
-  const [patients, setPatients] = useState([
-    { id: 'p1', name: 'John Smith' },
-    { id: 'p2', name: 'Emily Carter' }
-  ]);
+  const [patients, setPatients] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [newPatientName, setNewPatientName] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
@@ -16,55 +37,50 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState('ask');
-  const [patientMode, setPatientMode] = useState('select'); // 'select' or 'create'
+  const [patientMode, setPatientMode] = useState('select');
 
+  useEffect(() => {
+    const fetchPatients = async () => {
+      const snapshot = await getDocs(collection(db, 'patients'));
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPatients(data);
+    };
+    fetchPatients();
+  }, []);
 
   const isLabRelated = (text) => {
-    const labKeywords = ['estradiol', 'progesterone', 'dhea', 'testosterone', 'lab', 'hormone', 'ng/ml', 'pg/ml', 'interpret'];
-    return labKeywords.some(keyword => text.toLowerCase().includes(keyword));
+    const labKeywords = ['estradiol', 'progesterone', 'dhea', 'lab', 'testosterone', 'hormone', 'pg/ml', 'ng/ml'];
+    return labKeywords.some(k => text.toLowerCase().includes(k));
   };
-
 
   const sendMessage = async (textToSend, fromTab = 'ask') => {
     if (!textToSend?.trim()) return;
 
-
     const userMessage = { sender: 'user', text: textToSend.trim() };
     setMessages(prev => [...prev, userMessage]);
-
-
-    if (fromTab === 'ask') setInput('');
-    else setLabInput('');
-
-
+    fromTab === 'ask' ? setInput('') : setLabInput('');
     setLoading(true);
-
 
     const useFineTuned = isLabRelated(textToSend);
     const model = useFineTuned
       ? 'ft:gpt-3.5-turbo-0125:the-bad-company-holdings-llc::BKB3w2h2'
       : 'gpt-4';
 
-
     const today = new Date().toLocaleDateString('en-US', {
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric'
+      month: 'long', day: 'numeric', year: 'numeric'
     });
-
 
     const systemPrompt = selectedPatient
       ? (
         useFineTuned
-          ? `You are MILO, the AI assistant trained by NeuralCure and Modern Sports Medicine. You are working with a patient named ${selectedPatient.name}. Interpret labs, recommend dosing adjustments, and mirror Eric's protocols. Extract hormone values if submitted in raw format. Do not assume identity unless stated.`
-          : `Today is ${today}. You are MILO, a clinical assistant working with ${selectedPatient.name}.`
+          ? `You are MILO, a clinical assistant. You're analyzing labs for ${selectedPatient.name}. Extract hormone values and give protocol-based guidance.`
+          : `Today is ${today}. You are MILO, assisting ${selectedPatient.name}.`
       )
       : (
         useFineTuned
-          ? `You are MILO, a clinical assistant trained by NeuralCure and Modern Sports Medicine. Interpret hormone labs and provide protocol-based insights using MSM guidance. No patient is selected.`
-          : `Today is ${today}. You are MILO, a clinical and operational assistant. No patient is selected. Answer general questions.`
+          ? `You are MILO. Interpret hormone labs. No patient is selected.`
+          : `Today is ${today}. You are MILO, a general clinical assistant.`
       );
-
 
     try {
       const response = await axios.post(
@@ -73,9 +89,9 @@ function App() {
           model,
           messages: [
             { role: 'system', content: systemPrompt },
-            ...messages.map(msg => ({
-              role: msg.sender === 'user' ? 'user' : 'assistant',
-              content: msg.text
+            ...messages.map(m => ({
+              role: m.sender === 'user' ? 'user' : 'assistant',
+              content: m.text
             })),
             { role: 'user', content: textToSend.trim() }
           ],
@@ -89,38 +105,51 @@ function App() {
         }
       );
 
-
       const aiMessage = {
         sender: 'milo',
         text: response.data.choices[0].message.content.trim()
       };
-
-
       setMessages(prev => [...prev, aiMessage]);
+
+      const extractedLabs = extractLabValues(textToSend);
+      if (
+        selectedPatient &&
+        (extractedLabs.estradiol || extractedLabs.progesterone || extractedLabs.dhea)
+      ) {
+        const labEntry = {
+          date: new Date().toISOString().split('T')[0],
+          values: extractedLabs,
+          recommendation: aiMessage.text
+        };
+
+        await updateDoc(doc(db, 'patients', selectedPatient.id), {
+          labs: arrayUnion(labEntry)
+        });
+
+        setSelectedPatient(prev => ({
+          ...prev,
+          labs: [...(prev?.labs || []), labEntry]
+        }));
+      }
     } catch (err) {
       console.error('OpenAI API error:', err);
       setMessages(prev => [
         ...prev,
         {
           sender: 'milo',
-          text: "There was a problem retrieving a response. Please try again or verify your connection."
+          text: "There was a problem retrieving a response. Please try again."
         }
       ]);
     }
 
-
     setLoading(false);
   };
-
 
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !selectedPatient) return;
 
-
     setUploading(true);
-
-
     try {
       const reader = new FileReader();
       reader.onload = async (event) => {
@@ -132,40 +161,42 @@ function App() {
       reader.readAsText(file);
     } catch (err) {
       console.error("Error reading file:", err);
-      setMessages(prev => [...prev, {
-        sender: 'milo',
-        text: "There was an issue reading that file. Please try a different one."
-      }]);
     }
-
-
     setUploading(false);
   };
 
-
-  const handleNewPatient = () => {
+  const handleNewPatient = async () => {
     if (!newPatientName.trim()) return;
-    const newId = `p${patients.length + 1}`;
-    const newPatient = { id: newId, name: newPatientName.trim() };
+
+    const docRef = await addDoc(collection(db, 'patients'), {
+      name: newPatientName.trim(),
+      labs: []
+    });
+
+    const newPatient = {
+      id: docRef.id,
+      name: newPatientName.trim(),
+      labs: []
+    };
+
     setPatients(prev => [...prev, newPatient]);
     setSelectedPatient(newPatient);
     setMessages([]);
     setNewPatientName('');
   };
 
-
   const renderChatMessages = () => (
-    <div className="bg-gray-100 border border-gray-300 rounded-xl h-[60vh] overflow-y-auto p-4 mb-4 shadow-inner">
+    <div className="bg-milo-dark border border-gray-700 rounded-xl h-[60vh] overflow-y-auto p-4 mb-4 shadow-inner text-white">
       {messages.map((msg, i) => (
         <div
           key={i}
-          className={`mb-4 max-w-3xl ${msg.sender === 'user' ? 'ml-auto text-right' : 'mr-auto text-left'}`}
+          className={`mb-4 max-w-2xl ${msg.sender === 'user' ? 'ml-auto text-right' : 'mr-auto text-left'}`}
         >
           <div
-            className={`inline-block px-4 py-2 rounded-lg text-sm ${
+            className={`inline-block px-4 py-2 rounded-xl text-sm shadow-md ${
               msg.sender === 'user'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 text-gray-800'
+                ? 'bg-gradient-to-br from-blue-500 to-blue-900 text-white'
+                : 'bg-milo-glass backdrop-blur-md text-white border border-gray-600'
             }`}
           >
             {msg.text}
@@ -173,27 +204,32 @@ function App() {
         </div>
       ))}
       {loading && (
-        <div className="flex items-center gap-2 text-sm text-gray-500 italic mt-2">
-          MILO is typing
+        <div className="text-sm text-gray-400 italic flex items-center gap-2 mt-2">
+          MILO is thinking
           <span className="flex gap-1">
-            <span className="animate-bounce [animation-delay:-0.3s]">.</span>
-            <span className="animate-bounce [animation-delay:-0.15s]">.</span>
-            <span className="animate-bounce">.</span>
+            <span className="animate-pulseDot">.</span>
+            <span className="animate-pulseDot delay-100">.</span>
+            <span className="animate-pulseDot delay-200">.</span>
           </span>
         </div>
       )}
     </div>
   );
 
-
   return (
-    <div className="min-h-screen bg-white px-4 py-6 md:px-12 lg:px-24">
-      <div className="flex space-x-4 mb-6">
+    <div className="min-h-screen bg-milo-dark text-white font-sans px-4 py-6 md:px-12 lg:px-24">
+      <h1 className="text-4xl font-heading mb-8 text-center text-milo-neon tracking-wide">
+        MILO • Clinical Assistant
+      </h1>
+
+      <div className="flex space-x-4 justify-center mb-6">
         {['ask', 'lab', 'patients'].map(tab => (
           <button
             key={tab}
-            className={`px-4 py-2 rounded-md font-medium capitalize ${
-              activeTab === tab ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'
+            className={`px-4 py-2 rounded-md font-medium capitalize transition duration-200 ${
+              activeTab === tab
+                ? 'bg-milo-blue text-white shadow-glow'
+                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
             }`}
             onClick={() => setActiveTab(tab)}
           >
@@ -202,21 +238,19 @@ function App() {
         ))}
       </div>
 
-
       {activeTab === 'ask' && (
         <>
-          <h1 className="text-3xl font-medium text-gray-900 mb-6">Ask MILO</h1>
           {renderChatMessages()}
           <div className="flex gap-2">
             <input
-              className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-milo-blue"
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && sendMessage(input, 'ask')}
               placeholder="Type your question..."
             />
             <button
-              className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition"
+              className="bg-milo-blue text-white px-5 py-2 rounded-lg hover:scale-105 hover:bg-blue-700 shadow-glow transition"
               onClick={() => sendMessage(input, 'ask')}
             >
               Send
@@ -225,10 +259,8 @@ function App() {
         </>
       )}
 
-
       {activeTab === 'lab' && (
         <>
-          <h1 className="text-3xl font-medium text-gray-900 mb-6">Lab Reports</h1>
           {!selectedPatient ? (
             <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 p-4 rounded mb-6">
               Please select a patient before uploading lab reports.
@@ -238,7 +270,7 @@ function App() {
               {renderChatMessages()}
               <label
                 htmlFor="fileUpload"
-                className="block w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 transition"
+                className="block w-full border-2 border-dashed border-gray-600 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 transition"
               >
                 {uploading ? "Uploading..." : "Drag and drop a lab report (.txt), or click to browse"}
                 <input
@@ -251,14 +283,14 @@ function App() {
               </label>
               <div className="flex gap-2 mt-4">
                 <input
-                  className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  className="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-milo-blue"
                   value={labInput}
                   onChange={e => setLabInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && sendMessage(labInput, 'lab')}
                   placeholder="Ask a follow-up question..."
                 />
                 <button
-                  className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition"
+                  className="bg-milo-blue text-white px-5 py-2 rounded-lg hover:scale-105 hover:bg-blue-700 shadow-glow transition"
                   onClick={() => sendMessage(labInput, 'lab')}
                 >
                   Send
@@ -269,34 +301,32 @@ function App() {
         </>
       )}
 
-
       {activeTab === 'patients' && (
         <>
-          <h1 className="text-3xl font-medium text-gray-900 mb-6">Patient Manager</h1>
+          <h2 className="text-2xl font-semibold mb-4">Patient Manager</h2>
           <div className="flex space-x-3 mb-4">
             <button
               onClick={() => setPatientMode('select')}
-              className={`px-4 py-2 rounded ${patientMode === 'select' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+              className={`px-4 py-2 rounded ${patientMode === 'select' ? 'bg-milo-blue text-white' : 'bg-gray-700'}`}
             >
               Select Patient
             </button>
             <button
               onClick={() => setPatientMode('create')}
-              className={`px-4 py-2 rounded ${patientMode === 'create' ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}
+              className={`px-4 py-2 rounded ${patientMode === 'create' ? 'bg-milo-blue text-white' : 'bg-gray-700'}`}
             >
               New Patient
             </button>
           </div>
-
 
           {patientMode === 'select' && (
             <>
               <input
                 type="text"
                 placeholder="Search patients..."
-                className="mb-3 border border-gray-300 rounded px-3 py-2 w-full md:w-1/2"
+                className="mb-3 bg-gray-900 border border-gray-600 rounded px-3 py-2 w-full md:w-1/2 text-white"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={e => setSearchTerm(e.target.value)}
               />
               <select
                 value={selectedPatient?.id || ''}
@@ -305,7 +335,7 @@ function App() {
                   setSelectedPatient(patient);
                   setMessages([]);
                 }}
-                className="border border-gray-300 rounded px-3 py-2 w-full md:w-1/2"
+                className="bg-gray-900 border border-gray-600 rounded px-3 py-2 w-full md:w-1/2 text-white"
               >
                 <option value="" disabled>Select patient</option>
                 {patients
@@ -317,7 +347,6 @@ function App() {
             </>
           )}
 
-
           {patientMode === 'create' && (
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-2">
               <input
@@ -325,11 +354,11 @@ function App() {
                 placeholder="New patient name"
                 value={newPatientName}
                 onChange={e => setNewPatientName(e.target.value)}
-                className="border border-gray-300 rounded px-3 py-2"
+                className="bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white"
               />
               <button
                 onClick={handleNewPatient}
-                className="bg-green-600 text-white px-4 py-2 rounded"
+                className="bg-green-600 text-white px-4 py-2 rounded hover:scale-105"
               >
                 Add Patient
               </button>
@@ -341,7 +370,4 @@ function App() {
   );
 }
 
-
 export default App;
-
-
