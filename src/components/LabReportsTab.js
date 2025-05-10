@@ -166,7 +166,7 @@ console.log("🧾 Characters in request:", refinedPrompt.length + labText.length
   ]
 });
  
-const response = await fetch('/api/openai', {
+const response = await fetch('/api/openaiProxy', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',

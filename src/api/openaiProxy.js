@@ -1,14 +1,32 @@
-export async function sendLabTextToOpenAI(labText) {
-  const response = await fetch("/api/openai", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ labText }),
-  });
+// /api/openaiProxy.js
 
-  if (!response.ok) {
-    throw new Error("Failed to get response from server");
+export default async function handler(req, res) {
+  const { model, messages } = req.body;
+
+  try {
+    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature: 0.2,
+      }),
+    });
+
+    const data = await openaiResponse.json();
+
+    if (openaiResponse.ok) {
+      res.status(200).json({ result: data.choices[0].message.content });
+    } else {
+      console.error("🔥 OpenAI API error:", data);
+      res.status(openaiResponse.status).json({ error: data });
+    }
+  } catch (error) {
+    console.error("🔥 Server error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
-
-  const data = await response.json();
-  return data.result; // whatever OpenAI gave us
 }
