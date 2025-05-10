@@ -1,15 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { auth } from './firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from './firebase';
 import {
   collection,
   getDocs,
+  getDoc,
   addDoc,
   updateDoc,
   doc,
-  arrayUnion
+  setDoc,
+  arrayUnion,
+  onSnapshot,
+  query,
+  where
 } from 'firebase/firestore';
-
+import { extractTextFromPDF } from './utils/pdfReader';
 function extractLabValues(text) {
   const labs = {};
   const lines = text.toLowerCase().split(/\n|\.|,/);
@@ -17,17 +24,22 @@ function extractLabValues(text) {
     const estr = line.match(/estradiol.*?(\d+)/);
     if (estr) labs.estradiol = parseFloat(estr[1]);
 
+
     const prog = line.match(/progesterone.*?(\d+(\.\d+)?)/);
     if (prog) labs.progesterone = parseFloat(prog[1]);
+
 
     const dhea = line.match(/dhea.*?(\d+)/);
     if (dhea) labs.dhea = parseFloat(dhea[1]);
   });
   return labs;
 }
-
 function App() {
-  const [messages, setMessages] = useState([]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [askMessages, setAskMessages] = useState([]);
+  const [labMessages, setLabMessages] = useState([]);
   const [patients, setPatients] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [newPatientName, setNewPatientName] = useState('');
@@ -38,37 +50,96 @@ function App() {
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState('ask');
   const [patientMode, setPatientMode] = useState('select');
-
+  const [userInfo, setUserInfo] = useState(null);
   useEffect(() => {
-    const fetchPatients = async () => {
-      const snapshot = await getDocs(collection(db, 'patients'));
+    if (!userInfo?.teamId) return;
+
+
+    const q = query(collection(db, 'patients'), where('teamId', '==', userInfo.teamId));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setPatients(data);
-    };
-    fetchPatients();
-  }, []);
+    });
 
+
+    return () => unsubscribe();
+  }, [userInfo]);
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, loginUsername, loginPassword);
+      const uid = userCredential.user.uid;
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      if (!userDoc.exists()) {
+        alert("User metadata not found. Contact admin.");
+        return;
+      }
+      const data = userDoc.data();
+      setUserInfo({ uid, ...data });
+      setIsAuthenticated(true);
+    } catch (err) {
+      console.error("🔥 Firebase login error:", err.code, err.message);
+      alert("Login failed: " + err.message);
+    }
+  };
+
+
+  const handleSignUp = async (e) => {
+    e.preventDefault();
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, loginUsername, loginPassword);
+      const uid = userCredential.user.uid;
+      await setDoc(doc(db, 'users', uid), {
+        role: 'doctor',
+        teamId: `team_${loginUsername.split('@')[0]}`,
+        name: loginUsername.split('@')[0]
+      });
+      setUserInfo({
+        uid,
+        role: 'doctor',
+        teamId: `team_${loginUsername.split('@')[0]}`,
+        name: loginUsername.split('@')[0]
+      });
+      setIsAuthenticated(true);
+      alert('Account created successfully!');
+    } catch (err) {
+      console.error("🔥 Signup error:", err.code, err.message);
+      alert("Signup failed: " + err.message);
+    }
+  };
   const isLabRelated = (text) => {
     const labKeywords = ['estradiol', 'progesterone', 'dhea', 'lab', 'testosterone', 'hormone', 'pg/ml', 'ng/ml'];
     return labKeywords.some(k => text.toLowerCase().includes(k));
   };
 
+
   const sendMessage = async (textToSend, fromTab = 'ask') => {
     if (!textToSend?.trim()) return;
 
+
+    const isAskTab = fromTab === 'ask';
     const userMessage = { sender: 'user', text: textToSend.trim() };
-    setMessages(prev => [...prev, userMessage]);
-    fromTab === 'ask' ? setInput('') : setLabInput('');
+    const setMessagesForTab = isAskTab ? setAskMessages : setLabMessages;
+    const getMessagesForTab = isAskTab ? askMessages : labMessages;
+
+
+    setMessagesForTab(prev => [...prev, userMessage]);
+
+
+    isAskTab ? setInput('') : setLabInput('');
     setLoading(true);
+
 
     const useFineTuned = isLabRelated(textToSend);
     const model = useFineTuned
       ? 'ft:gpt-3.5-turbo-0125:the-bad-company-holdings-llc::BKB3w2h2'
       : 'gpt-4';
 
+
     const today = new Date().toLocaleDateString('en-US', {
       month: 'long', day: 'numeric', year: 'numeric'
     });
+
 
     const systemPrompt = selectedPatient
       ? (
@@ -82,6 +153,7 @@ function App() {
           : `Today is ${today}. You are MILO, a general clinical assistant.`
       );
 
+
     try {
       const response = await axios.post(
         'https://api.openai.com/v1/chat/completions',
@@ -89,7 +161,7 @@ function App() {
           model,
           messages: [
             { role: 'system', content: systemPrompt },
-            ...messages.map(m => ({
+            ...getMessagesForTab.map(m => ({
               role: m.sender === 'user' ? 'user' : 'assistant',
               content: m.text
             })),
@@ -105,11 +177,13 @@ function App() {
         }
       );
 
+
       const aiMessage = {
         sender: 'milo',
         text: response.data.choices[0].message.content.trim()
       };
-      setMessages(prev => [...prev, aiMessage]);
+      setMessagesForTab(prev => [...prev, aiMessage]);
+
 
       const extractedLabs = extractLabValues(textToSend);
       if (
@@ -122,9 +196,11 @@ function App() {
           recommendation: aiMessage.text
         };
 
+
         await updateDoc(doc(db, 'patients', selectedPatient.id), {
           labs: arrayUnion(labEntry)
         });
+
 
         setSelectedPatient(prev => ({
           ...prev,
@@ -133,7 +209,7 @@ function App() {
       }
     } catch (err) {
       console.error('OpenAI API error:', err);
-      setMessages(prev => [
+      setMessagesForTab(prev => [
         ...prev,
         {
           sender: 'milo',
@@ -142,52 +218,74 @@ function App() {
       ]);
     }
 
+
     setLoading(false);
   };
 
+
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
-    if (!file || !selectedPatient) return;
-
+    console.log("📎 File selected:", file);
+  
+    if (!file || !selectedPatient) {
+      console.warn("⚠️ No file or patient selected.");
+      return;
+    }
+  
     setUploading(true);
     try {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const text = event.target.result;
-        if (typeof text === 'string') {
-          await sendMessage(text, 'lab');
+      let text = '';
+  
+      if (file.type === 'application/pdf') {
+        console.log("📄 PDF upload detected. Attempting to extract...");
+        try {
+          text = await extractTextFromPDF(file);
+          console.log("✅ Extracted PDF text:", text.slice(0, 300)); // limit output
+        } catch (err) {
+          console.error("❌ PDF extraction failed:", err);
+          alert("Failed to extract text from PDF. Please try a .txt file or check the file format.");
+          return;
         }
-      };
-      reader.readAsText(file);
+      } else {
+        text = await file.text();
+        console.log("✅ Extracted TXT text:", text.slice(0, 300));
+      }
+  
+      await sendMessage(text, 'lab');
     } catch (err) {
-      console.error("Error reading file:", err);
+      console.error("🚨 Error during file handling:", err);
+      alert("Something went wrong while uploading the file.");
     }
+  
     setUploading(false);
-  };
+  };  
 
   const handleNewPatient = async () => {
-    if (!newPatientName.trim()) return;
+    if (!newPatientName.trim() || !userInfo?.teamId) return;
+
 
     const docRef = await addDoc(collection(db, 'patients'), {
       name: newPatientName.trim(),
-      labs: []
+      labs: [],
+      teamId: userInfo.teamId
     });
+
 
     const newPatient = {
       id: docRef.id,
       name: newPatientName.trim(),
-      labs: []
+      labs: [],
+      teamId: userInfo.teamId
     };
 
-    setPatients(prev => [...prev, newPatient]);
-    setSelectedPatient(newPatient);
-    setMessages([]);
-    setNewPatientName('');
-  };
 
-  const renderChatMessages = () => (
+    setSelectedPatient(newPatient);
+    setAskMessages([]);
+    setLabMessages([]);
+  };
+  const renderChatMessages = (msgList) => (
     <div className="bg-milo-dark border border-gray-700 rounded-xl h-[60vh] overflow-y-auto p-4 mb-4 shadow-inner text-white">
-      {messages.map((msg, i) => (
+      {msgList.map((msg, i) => (
         <div
           key={i}
           className={`mb-4 max-w-2xl ${msg.sender === 'user' ? 'ml-auto text-right' : 'mr-auto text-left'}`}
@@ -215,12 +313,51 @@ function App() {
       )}
     </div>
   );
-
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+        <form
+          onSubmit={handleLogin}
+          className="bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md"
+        >
+          <h2 className="text-2xl font-bold mb-6 text-center">Login to MILO</h2>
+          <input
+            type="text"
+            placeholder="Email"
+            value={loginUsername}
+            onChange={(e) => setLoginUsername(e.target.value)}
+            className="mb-4 w-full p-2 rounded bg-gray-700 border border-gray-600 text-white"
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={loginPassword}
+            onChange={(e) => setLoginPassword(e.target.value)}
+            className="mb-6 w-full p-2 rounded bg-gray-700 border border-gray-600 text-white"
+          />
+          <button
+            type="submit"
+            className="w-full bg-milo-blue text-white py-2 rounded hover:bg-blue-700 transition"
+          >
+            Log In
+          </button>
+          <button
+            type="button"
+            onClick={handleSignUp}
+            className="w-full mt-4 bg-green-600 text-white py-2 rounded hover:bg-green-700 transition"
+          >
+            Sign Up
+          </button>
+        </form>
+      </div>
+    );
+  }
   return (
     <div className="min-h-screen bg-milo-dark text-white font-sans px-4 py-6 md:px-12 lg:px-24">
       <h1 className="text-4xl font-heading mb-8 text-center text-milo-neon tracking-wide">
         MILO • Clinical Assistant
       </h1>
+
 
       <div className="flex space-x-4 justify-center mb-6">
         {['ask', 'lab', 'patients'].map(tab => (
@@ -238,9 +375,10 @@ function App() {
         ))}
       </div>
 
+
       {activeTab === 'ask' && (
         <>
-          {renderChatMessages()}
+          {renderChatMessages(askMessages)}
           <div className="flex gap-2">
             <input
               className="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-milo-blue"
@@ -259,6 +397,7 @@ function App() {
         </>
       )}
 
+
       {activeTab === 'lab' && (
         <>
           {!selectedPatient ? (
@@ -267,16 +406,16 @@ function App() {
             </div>
           ) : (
             <>
-              {renderChatMessages()}
+              {renderChatMessages(labMessages)}
               <label
                 htmlFor="fileUpload"
                 className="block w-full border-2 border-dashed border-gray-600 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 transition"
               >
-                {uploading ? "Uploading..." : "Drag and drop a lab report (.txt), or click to browse"}
+                {uploading ? "Uploading..." : "Drag and drop a lab report (.txt or .pdf), or click to browse"}
                 <input
                   id="fileUpload"
                   type="file"
-                  accept=".txt"
+                  accept=".txt,.pdf"
                   className="hidden"
                   onChange={handleFileUpload}
                 />
@@ -301,6 +440,7 @@ function App() {
         </>
       )}
 
+
       {activeTab === 'patients' && (
         <>
           <h2 className="text-2xl font-semibold mb-4">Patient Manager</h2>
@@ -319,6 +459,7 @@ function App() {
             </button>
           </div>
 
+
           {patientMode === 'select' && (
             <>
               <input
@@ -333,7 +474,8 @@ function App() {
                 onChange={e => {
                   const patient = patients.find(p => p.id === e.target.value);
                   setSelectedPatient(patient);
-                  setMessages([]);
+                  setAskMessages([]);
+                  setLabMessages([]);
                 }}
                 className="bg-gray-900 border border-gray-600 rounded px-3 py-2 w-full md:w-1/2 text-white"
               >
@@ -346,6 +488,7 @@ function App() {
               </select>
             </>
           )}
+
 
           {patientMode === 'create' && (
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-2">
@@ -369,5 +512,6 @@ function App() {
     </div>
   );
 }
+
 
 export default App;
