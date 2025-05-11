@@ -156,26 +156,20 @@ function App() {
 
     try {
       const response = await axios.post(
-        'https://api.openai.com/v1/chat/completions',
-        {
-          model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            ...getMessagesForTab.map(m => ({
-              role: m.sender === 'user' ? 'user' : 'assistant',
-              content: m.text
-            })),
-            { role: 'user', content: textToSend.trim() }
-          ],
-          temperature: 0.2
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.REACT_APP_OPENAI_API_KEY}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+  '/api/milo', // 🔥 New internal endpoint on your backend
+  {
+    model,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      ...getMessagesForTab.map(m => ({
+        role: m.sender === 'user' ? 'user' : 'assistant',
+        content: m.text
+      })),
+      { role: 'user', content: textToSend.trim() }
+    ],
+    temperature: 0.2
+  }
+);
 
 
       const aiMessage = {
