@@ -155,28 +155,32 @@ function App() {
 
 
     try {
-      const response = await axios.post(
-  '/api/milo', // 🔥 New internal endpoint on your backend
-  {
-    model,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      ...getMessagesForTab.map(m => ({
-        role: m.sender === 'user' ? 'user' : 'assistant',
-        content: m.text
-      })),
-      { role: 'user', content: textToSend.trim() }
-    ],
-    temperature: 0.2
-  }
-);
+     const response = await axios.post('/api/milo', {
+  model,
+  messages: [
+    { role: 'system', content: systemPrompt },
+    ...getMessagesForTab.map(m => ({
+      role: m.sender === 'user' ? 'user' : 'assistant',
+      content: m.text
+    })),
+    { role: 'user', content: textToSend.trim() }
+  ],
+  temperature: 0.2
+});
 
+// 🔥 ADD THIS SAFETY CHECK
+if (response.data.error) {
+  console.error("Backend returned an error:", response.data.error);
+  throw new Error(response.data.error);
+}
 
-      const aiMessage = {
-        sender: 'milo',
-        text: response.data.choices[0].message.content.trim()
-      };
-      setMessagesForTab(prev => [...prev, aiMessage]);
+// 🔥 Now safely access choices
+const aiMessage = {
+  sender: 'milo',
+  text: response.data.message.trim()
+};
+
+setMessagesForTab(prev => [...prev, aiMessage]);
 
 
       const extractedLabs = extractLabValues(textToSend);
