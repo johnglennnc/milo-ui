@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import ReactMarkdown from 'react-markdown';
 import { auth } from './firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from './firebase';
@@ -282,35 +283,36 @@ setMessagesForTab(prev => [...prev, aiMessage]);
     setLabMessages([]);
   };
   const renderChatMessages = (msgList) => (
-    <div className="bg-milo-dark border border-gray-700 rounded-xl h-[60vh] overflow-y-auto p-4 mb-4 shadow-inner text-white">
-      {msgList.map((msg, i) => (
+  <div className="bg-milo-dark border border-gray-700 rounded-xl h-[60vh] overflow-y-auto p-4 mb-4 shadow-inner text-white">
+    {msgList.map((msg, i) => (
+      <div
+        key={i}
+        className={`mb-4 max-w-2xl ${msg.sender === 'user' ? 'ml-auto text-right' : 'mr-auto text-left'}`}
+      >
         <div
-          key={i}
-          className={`mb-4 max-w-2xl ${msg.sender === 'user' ? 'ml-auto text-right' : 'mr-auto text-left'}`}
+          className={`inline-block px-4 py-2 rounded-xl text-sm shadow-md ${
+            msg.sender === 'user'
+              ? 'bg-gradient-to-br from-blue-500 to-blue-900 text-white'
+              : 'bg-milo-glass backdrop-blur-md text-white border border-gray-600'
+          }`}
         >
-          <div
-            className={`inline-block px-4 py-2 rounded-xl text-sm shadow-md ${
-              msg.sender === 'user'
-                ? 'bg-gradient-to-br from-blue-500 to-blue-900 text-white'
-                : 'bg-milo-glass backdrop-blur-md text-white border border-gray-600'
-            }`}
-          >
-            {msg.text}
-          </div>
+          {/* ✅ REPLACE plain msg.text with Markdown-rendered version */}
+          <ReactMarkdown>{msg.text}</ReactMarkdown>
         </div>
-      ))}
-      {loading && (
-        <div className="text-sm text-gray-400 italic flex items-center gap-2 mt-2">
-          MILO is thinking
-          <span className="flex gap-1">
-            <span className="animate-pulseDot">.</span>
-            <span className="animate-pulseDot delay-100">.</span>
-            <span className="animate-pulseDot delay-200">.</span>
-          </span>
-        </div>
-      )}
-    </div>
-  );
+      </div>
+    ))}
+    {loading && (
+      <div className="text-sm text-gray-400 italic flex items-center gap-2 mt-2">
+        MILO is thinking
+        <span className="flex gap-1">
+          <span className="animate-pulseDot">.</span>
+          <span className="animate-pulseDot delay-100">.</span>
+          <span className="animate-pulseDot delay-200">.</span>
+        </span>
+      </div>
+    )}
+  </div>
+);
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
