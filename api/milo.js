@@ -41,8 +41,23 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ message: reply });
 
-  } catch (error) {
-    console.error('❌ Server error:', error.message || error);
-    return res.status(500).json({ error: "Internal server error." });
+  } // <--- closes try block
+
+  catch (error) {
+    console.error('❌ Caught an error in /api/milo.js');
+
+    if (error.response) {
+      try {
+        const errorData = await error.response.json();
+        console.error('❌ OpenAI API response error:', errorData);
+      } catch (parseError) {
+        console.error('❌ Failed to parse OpenAI error response:', parseError);
+      }
+    } else {
+      console.error('❌ General error:', error.message || error);
+    }
+
+    res.status(500).json({ error: "Internal server error." });
   }
+
 }
