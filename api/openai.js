@@ -2,6 +2,7 @@ export default async function handler(req, res) {
   const { labText } = req.body;
 
   if (!process.env.OPENAI_API_KEY) {
+    console.error("❌ Missing OpenAI API Key");
     return res.status(500).json({ error: "Missing OpenAI API Key" });
   }
 
@@ -9,7 +10,7 @@ export default async function handler(req, res) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, // ❗ not NEXT_PUBLIC_
+      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`, // ✅ CORRECT
     },
     body: JSON.stringify({
       model: "ft:gpt-3.5-turbo-0125:the-bad-company-holdings-llc::BKB3w2h2",
@@ -24,7 +25,7 @@ export default async function handler(req, res) {
   const data = await response.json();
 
   if (!response.ok) {
-    console.error("OpenAI Error Response:", data);
+    console.error("❌ OpenAI API error response:", data);
     return res.status(500).json({ error: data });
   }
 
