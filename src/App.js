@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
+import html2pdf from 'html2pdf.js';
 import { auth } from './firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from './firebase';
@@ -18,6 +19,8 @@ import {
   where
 } from 'firebase/firestore';
 import { extractTextFromPDF } from './utils/pdfReader';
+
+// ✅ Function to extract lab values
 function extractLabValues(text) {
   const labs = {};
   const lines = text.toLowerCase().split(/\n|\.|,/);
@@ -25,16 +28,32 @@ function extractLabValues(text) {
     const estr = line.match(/estradiol.*?(\d+)/);
     if (estr) labs.estradiol = parseFloat(estr[1]);
 
-
     const prog = line.match(/progesterone.*?(\d+(\.\d+)?)/);
     if (prog) labs.progesterone = parseFloat(prog[1]);
-
 
     const dhea = line.match(/dhea.*?(\d+)/);
     if (dhea) labs.dhea = parseFloat(dhea[1]);
   });
   return labs;
 }
+
+// ✅ Function to download text as PDF
+const downloadAsPDF = (text) => {
+  const element = document.createElement('div');
+  element.innerHTML = `<pre style="font-family: Arial, sans-serif;">${text}</pre>`;
+
+  html2pdf()
+    .from(element)
+    .set({
+      margin: 10,
+      filename: `MILO-Guidance-${new Date().toISOString().slice(0,10)}.pdf`,
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    })
+    .save();
+};
+
+// ✅ Main App starts
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginUsername, setLoginUsername] = useState('');
@@ -52,9 +71,9 @@ function App() {
   const [activeTab, setActiveTab] = useState('ask');
   const [patientMode, setPatientMode] = useState('select');
   const [userInfo, setUserInfo] = useState(null);
+  // ✅ useEffect to load patients when userInfo is set
   useEffect(() => {
     if (!userInfo?.teamId) return;
-
 
     const q = query(collection(db, 'patients'), where('teamId', '==', userInfo.teamId));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -62,9 +81,10 @@ function App() {
       setPatients(data);
     });
 
-
     return () => unsubscribe();
   }, [userInfo]);
+
+  // ✅ Handle login
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
@@ -84,7 +104,7 @@ function App() {
     }
   };
 
-
+  // ✅ Handle signup
   const handleSignUp = async (e) => {
     e.preventDefault();
     try {
@@ -108,98 +128,87 @@ function App() {
       alert("Signup failed: " + err.message);
     }
   };
+
+  // ✅ Identify if a message is lab-related
   const isLabRelated = (text) => {
     const labKeywords = ['estradiol', 'progesterone', 'dhea', 'lab', 'testosterone', 'hormone', 'pg/ml', 'ng/ml'];
     return labKeywords.some(k => text.toLowerCase().includes(k));
   };
-
-
+  // ✅ Sending a message
   const sendMessage = async (textToSend, fromTab = 'ask') => {
     if (!textToSend?.trim()) return;
-
 
     const isAskTab = fromTab === 'ask';
     const userMessage = { sender: 'user', text: textToSend.trim() };
     const setMessagesForTab = isAskTab ? setAskMessages : setLabMessages;
     const getMessagesForTab = isAskTab ? askMessages : labMessages;
 
-
     setMessagesForTab(prev => [...prev, userMessage]);
-
-
     isAskTab ? setInput('') : setLabInput('');
     setLoading(true);
-
 
     const useFineTuned = isLabRelated(textToSend);
     const model = useFineTuned
       ? 'ft:gpt-3.5-turbo-0125:the-bad-company-holdings-llc::BKB3w2h2'
       : 'gpt-4';
 
-
     const today = new Date().toLocaleDateString('en-US', {
       month: 'long', day: 'numeric', year: 'numeric'
     });
 
-
     const systemPrompt = selectedPatient
-      ? (
-        useFineTuned
+      ? (useFineTuned
           ? `You are MILO, a clinical assistant. You're analyzing labs for ${selectedPatient.name}. Extract hormone values and give protocol-based guidance.`
-          : `Today is ${today}. You are MILO, assisting ${selectedPatient.name}.`
-      )
-      : (
-        useFineTuned
+          : `Today is ${today}. You are MILO, assisting ${selectedPatient.name}.`)
+      : (useFineTuned
           ? `You are MILO. Interpret hormone labs. No patient is selected.`
-          : `Today is ${today}. You are MILO, a general clinical assistant.`
-      );
-
+          : `Today is ${today}. You are MILO, a general clinical assistant.`);
 
     try {
-     const response = await axios.post('/api/milo', {
-  model,
-  messages: [
-    { role: 'system', content: systemPrompt },
-    ...getMessagesForTab.map(m => ({
-      role: m.sender === 'user' ? 'user' : 'assistant',
-      content: m.text
-    })),
-    { role: 'user', content: textToSend.trim() }
-  ],
-  temperature: 0.2
-});
+      // 🛠 First: create the payload
+      const payload = {
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...getMessagesForTab.map(m => ({
+            role: m.sender === 'user' ? 'user' : 'assistant',
+            content: m.text
+          })),
+          { role: 'user', content: textToSend.trim() }
+        ],
+        temperature: 0.2
+      };
 
-// 🔥 ADD THIS SAFETY CHECK
-if (response.data.error) {
-  console.error("Backend returned an error:", response.data.error);
-  throw new Error(response.data.error);
-}
+      console.log("🚀 Payload being sent to backend:", payload);
 
-// 🔥 Now safely access choices
-const aiMessage = {
-  sender: 'milo',
-  text: response.data.message.trim()
-};
+      // 🚀 Then: Send the payload
+      const response = await axios.post('/api/milo', payload);
 
-setMessagesForTab(prev => [...prev, aiMessage]);
+      // ✅ Safety check
+      if (response.data.error) {
+        console.error("Backend returned an error:", response.data.error);
+        throw new Error(response.data.error);
+      }
 
+      const aiMessage = {
+        sender: 'milo',
+        text: response.data.message.trim()
+      };
+
+      setMessagesForTab(prev => [...prev, aiMessage]);
 
       const extractedLabs = extractLabValues(textToSend);
-      if (
-        selectedPatient &&
-        (extractedLabs.estradiol || extractedLabs.progesterone || extractedLabs.dhea)
-      ) {
+      if (selectedPatient &&
+          (extractedLabs.estradiol || extractedLabs.progesterone || extractedLabs.dhea)) {
         const labEntry = {
           date: new Date().toISOString().split('T')[0],
           values: extractedLabs,
           recommendation: aiMessage.text
         };
 
-
         await updateDoc(doc(db, 'patients', selectedPatient.id), {
           labs: arrayUnion(labEntry)
         });
-
 
         setSelectedPatient(prev => ({
           ...prev,
@@ -210,36 +219,31 @@ setMessagesForTab(prev => [...prev, aiMessage]);
       console.error('OpenAI API error:', err);
       setMessagesForTab(prev => [
         ...prev,
-        {
-          sender: 'milo',
-          text: "There was a problem retrieving a response. Please try again."
-        }
+        { sender: 'milo', text: "There was a problem retrieving a response. Please try again." }
       ]);
     }
 
-
     setLoading(false);
   };
-
-
+  // ✅ Handle file upload
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     console.log("📎 File selected:", file);
-  
+
     if (!file || !selectedPatient) {
       console.warn("⚠️ No file or patient selected.");
       return;
     }
-  
+
     setUploading(true);
     try {
       let text = '';
-  
+
       if (file.type === 'application/pdf') {
         console.log("📄 PDF upload detected. Attempting to extract...");
         try {
           text = await extractTextFromPDF(file);
-          console.log("✅ Extracted PDF text:", text.slice(0, 300)); // limit output
+          console.log("✅ Extracted PDF text:", text.slice(0, 300));
         } catch (err) {
           console.error("❌ PDF extraction failed:", err);
           alert("Failed to extract text from PDF. Please try a .txt file or check the file format.");
@@ -249,26 +253,25 @@ setMessagesForTab(prev => [...prev, aiMessage]);
         text = await file.text();
         console.log("✅ Extracted TXT text:", text.slice(0, 300));
       }
-  
+
       await sendMessage(text, 'lab');
     } catch (err) {
       console.error("🚨 Error during file handling:", err);
       alert("Something went wrong while uploading the file.");
     }
-  
-    setUploading(false);
-  };  
 
+    setUploading(false);
+  };
+
+  // ✅ Handle adding a new patient
   const handleNewPatient = async () => {
     if (!newPatientName.trim() || !userInfo?.teamId) return;
-
 
     const docRef = await addDoc(collection(db, 'patients'), {
       name: newPatientName.trim(),
       labs: [],
       teamId: userInfo.teamId
     });
-
 
     const newPatient = {
       id: docRef.id,
@@ -277,42 +280,54 @@ setMessagesForTab(prev => [...prev, aiMessage]);
       teamId: userInfo.teamId
     };
 
-
     setSelectedPatient(newPatient);
     setAskMessages([]);
     setLabMessages([]);
   };
+
+  // ✅ Render messages with Download PDF button
   const renderChatMessages = (msgList) => (
-  <div className="bg-milo-dark border border-gray-700 rounded-xl h-[60vh] overflow-y-auto p-4 mb-4 shadow-inner text-white">
-    {msgList.map((msg, i) => (
-      <div
-        key={i}
-        className={`mb-4 max-w-2xl ${msg.sender === 'user' ? 'ml-auto text-right' : 'mr-auto text-left'}`}
-      >
+    <div className="bg-milo-dark border border-gray-700 rounded-xl h-[60vh] overflow-y-auto p-4 mb-4 shadow-inner text-white">
+      {msgList.map((msg, i) => (
         <div
-          className={`inline-block px-4 py-2 rounded-xl text-sm shadow-md ${
-            msg.sender === 'user'
-              ? 'bg-gradient-to-br from-blue-500 to-blue-900 text-white'
-              : 'bg-milo-glass backdrop-blur-md text-white border border-gray-600'
-          }`}
+          key={i}
+          className={`mb-4 max-w-2xl ${msg.sender === 'user' ? 'ml-auto text-right' : 'mr-auto text-left'}`}
         >
-          {/* ✅ REPLACE plain msg.text with Markdown-rendered version */}
-          <ReactMarkdown>{msg.text}</ReactMarkdown>
+          <div
+            className={`inline-block px-4 py-2 rounded-xl text-sm shadow-md ${
+              msg.sender === 'user'
+                ? 'bg-gradient-to-br from-blue-500 to-blue-900 text-white'
+                : 'bg-milo-glass backdrop-blur-md text-white border border-gray-600'
+            }`}
+          >
+            <ReactMarkdown>{msg.text}</ReactMarkdown>
+
+            {/* ✅ Only show "Download PDF" button on MILO responses */}
+            {msg.sender === 'milo' && (
+              <div className="mt-2 text-right">
+                <button
+                  className="text-xs text-blue-400 hover:text-blue-600 underline"
+                  onClick={() => downloadAsPDF(msg.text)}
+                >
+                  Download PDF
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-    ))}
-    {loading && (
-      <div className="text-sm text-gray-400 italic flex items-center gap-2 mt-2">
-        MILO is thinking
-        <span className="flex gap-1">
-          <span className="animate-pulseDot">.</span>
-          <span className="animate-pulseDot delay-100">.</span>
-          <span className="animate-pulseDot delay-200">.</span>
-        </span>
-      </div>
-    )}
-  </div>
-);
+      ))}
+      {loading && (
+        <div className="text-sm text-gray-400 italic flex items-center gap-2 mt-2">
+          MILO is thinking
+          <span className="flex gap-1">
+            <span className="animate-pulseDot">.</span>
+            <span className="animate-pulseDot delay-100">.</span>
+            <span className="animate-pulseDot delay-200">.</span>
+          </span>
+        </div>
+      )}
+    </div>
+  );
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
@@ -352,12 +367,12 @@ setMessagesForTab(prev => [...prev, aiMessage]);
       </div>
     );
   }
+
   return (
     <div className="min-h-screen bg-milo-dark text-white font-sans px-4 py-6 md:px-12 lg:px-24">
       <h1 className="text-4xl font-heading mb-8 text-center text-milo-neon tracking-wide">
         MILO • Clinical Assistant
       </h1>
-
 
       <div className="flex space-x-4 justify-center mb-6">
         {['ask', 'lab', 'patients'].map(tab => (
@@ -374,7 +389,6 @@ setMessagesForTab(prev => [...prev, aiMessage]);
           </button>
         ))}
       </div>
-
 
       {activeTab === 'ask' && (
         <>
@@ -396,7 +410,6 @@ setMessagesForTab(prev => [...prev, aiMessage]);
           </div>
         </>
       )}
-
 
       {activeTab === 'lab' && (
         <>
@@ -440,7 +453,6 @@ setMessagesForTab(prev => [...prev, aiMessage]);
         </>
       )}
 
-
       {activeTab === 'patients' && (
         <>
           <h2 className="text-2xl font-semibold mb-4">Patient Manager</h2>
@@ -458,7 +470,6 @@ setMessagesForTab(prev => [...prev, aiMessage]);
               New Patient
             </button>
           </div>
-
 
           {patientMode === 'select' && (
             <>
@@ -489,7 +500,6 @@ setMessagesForTab(prev => [...prev, aiMessage]);
             </>
           )}
 
-
           {patientMode === 'create' && (
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-2">
               <input
@@ -512,6 +522,5 @@ setMessagesForTab(prev => [...prev, aiMessage]);
     </div>
   );
 }
-
 
 export default App;
