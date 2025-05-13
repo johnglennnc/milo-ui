@@ -3,7 +3,7 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import html2pdf from 'html2pdf.js';
 import { auth } from './firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from './firebase';
 import {
   collection,
@@ -20,14 +20,6 @@ import {
 } from 'firebase/firestore';
 import { extractTextFromPDF } from './utils/pdfReader';
 
-// 🔥 Set Firebase Auth persistence to survive page refreshes
-setPersistence(auth, browserLocalPersistence)
-  .then(() => {
-    console.log('✅ Auth persistence set to localStorage.');
-  })
-  .catch((error) => {
-    console.error('❌ Failed to set auth persistence:', error);
-  });
 
 // ✅ Function to extract lab values
 function extractLabValues(text) {
@@ -82,6 +74,27 @@ function App() {
   const [userInfo, setUserInfo] = useState(null);
 
   // ✅ Fixed useEffect properly
+  useEffect(() => {
+  const unsubscribe = auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      const uid = user.uid;
+      const userDoc = await getDoc(doc(db, 'users', uid));
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        setUserInfo({ uid, ...data });
+        setIsAuthenticated(true);
+      } else {
+        console.error('User metadata not found.');
+        setIsAuthenticated(false);
+      }
+    } else {
+      setIsAuthenticated(false);
+    }
+  });
+
+  return () => unsubscribe();
+}, []);
+
   useEffect(() => {
     if (!userInfo?.teamId) return;
 
