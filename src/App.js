@@ -181,7 +181,7 @@ function App() {
      - Group interpretations by system (e.g., Hormones, Thyroid, Supplements).
      - Be professional, direct, and concise.`
 
-  : `Today is ${today}. You are MILO, assisting ${selectedPatient.name}.`;
+   `Today is ${today}. You are MILO, assisting ${selectedPatient.name}.`;
 
 
     try {
