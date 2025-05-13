@@ -71,7 +71,8 @@ function App() {
   const [activeTab, setActiveTab] = useState('ask');
   const [patientMode, setPatientMode] = useState('select');
   const [userInfo, setUserInfo] = useState(null);
-  // ✅ useEffect to load patients when userInfo is set
+
+  // ✅ Fixed useEffect properly
   useEffect(() => {
     if (!userInfo?.teamId) return;
 
@@ -84,7 +85,7 @@ function App() {
     return () => unsubscribe();
   }, [userInfo]);
 
-  // ✅ Handle login
+  // ✅ Your App code continues here normally...
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
@@ -104,7 +105,7 @@ function App() {
     }
   };
 
-  // ✅ Handle signup
+
   const handleSignUp = async (e) => {
     e.preventDefault();
     try {
@@ -128,142 +129,156 @@ function App() {
       alert("Signup failed: " + err.message);
     }
   };
-
-  // ✅ Identify if a message is lab-related
   const isLabRelated = (text) => {
     const labKeywords = ['estradiol', 'progesterone', 'dhea', 'lab', 'testosterone', 'hormone', 'pg/ml', 'ng/ml'];
     return labKeywords.some(k => text.toLowerCase().includes(k));
   };
-  // ✅ Sending a message
+
+
   const sendMessage = async (textToSend, fromTab = 'ask') => {
     if (!textToSend?.trim()) return;
+
 
     const isAskTab = fromTab === 'ask';
     const userMessage = { sender: 'user', text: textToSend.trim() };
     const setMessagesForTab = isAskTab ? setAskMessages : setLabMessages;
     const getMessagesForTab = isAskTab ? askMessages : labMessages;
 
+
     setMessagesForTab(prev => [...prev, userMessage]);
+
+
     isAskTab ? setInput('') : setLabInput('');
     setLoading(true);
+
 
     const useFineTuned = isLabRelated(textToSend);
     const model = useFineTuned
       ? 'ft:gpt-3.5-turbo-0125:the-bad-company-holdings-llc::BKB3w2h2'
       : 'gpt-4';
 
+
     const today = new Date().toLocaleDateString('en-US', {
       month: 'long', day: 'numeric', year: 'numeric'
     });
 
+
     const systemPrompt = selectedPatient
-      ? (useFineTuned
-          ? useFineTuned
-  ? `You are MILO, a clinical assistant trained to interpret lab reports according to the clinical optimization philosophy of Eric [Last Name]. 
-     
-     You are analyzing labs for ${selectedPatient.name}.
+  ? (useFineTuned
+    ? `You are MILO, a clinical assistant trained to interpret lab reports according to the clinical optimization philosophy of Eric Kephart. You are analyzing labs for ${selectedPatient.name}.
 
-     Specific Guidance:
-     - Total Testosterone:
-       - Below 1000 ng/dL: Suboptimal. Recommend optimization.
-       - 1000–1200 ng/dL: Optimal. Maintain levels.
-       - >1200 ng/dL: High. Monitor, but better than suboptimal levels.
-     
-     - Vitamin D (25-hydroxy):
-       - Below 60 ng/mL: Suboptimal. Recommend optimization.
-       - 60–80 ng/mL: Optimal. 
-       - 80–100 ng/mL: High but acceptable.
-       - >100 ng/mL: Excessively high. Recommend monitoring.
+Specific Guidance:
+- Total Testosterone:
+  - Below 1000 ng/dL: Suboptimal. Recommend optimization.
+  - 1000–1200 ng/dL: Optimal. Maintain levels.
+  - >1200 ng/dL: High. Monitor, but better than suboptimal levels.
 
-     General Rules:
-     - Do NOT simply reference standard lab ranges. Use Eric’s optimization targets.
-     - Always include a short interpretation and a clinical recommendation.
-     - Group interpretations by system (e.g., Hormones, Thyroid, Supplements).
-     - Be professional, direct, and concise.`
+- Vitamin D (25-hydroxy):
+  - Below 60 ng/mL: Suboptimal. Recommend optimization.
+  - 60–80 ng/mL: Optimal.
+  - 80–100 ng/mL: High but acceptable.
+  - >100 ng/mL: Excessively high. Recommend monitoring.
 
-   `Today is ${today}. You are MILO, assisting ${selectedPatient.name}.`
+General Rules:
+- Do NOT simply reference standard lab ranges. Use Eric’s optimization targets.
+- Always include a short interpretation and a clinical recommendation.
+- Group interpretations by system (e.g., Hormones, Thyroid, Supplements).
+- Be professional, direct, and concise.`
+    : `Today is ${today}. You are MILO, assisting ${selectedPatient.name}.`)
+  : (useFineTuned
+    ? `You are MILO. Interpret hormone labs. No patient is selected.`
+    : `Today is ${today}. You are MILO, a general clinical assistant.`);
+
+
 
 
     try {
-      // 🛠 First: create the payload
-      const payload = {
-        model,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          ...getMessagesForTab.map(m => ({
-            role: m.sender === 'user' ? 'user' : 'assistant',
-            content: m.text
-          })),
-          { role: 'user', content: textToSend.trim() }
-        ],
-        temperature: 0.2
-      };
-
-      console.log("🚀 Payload being sent to backend:", payload);
-
-      // 🚀 Then: Send the payload
-      const response = await axios.post('/api/milo', payload);
-
-      // ✅ Safety check
-      if (response.data.error) {
-        console.error("Backend returned an error:", response.data.error);
-        throw new Error(response.data.error);
-      }
-
-      const aiMessage = {
-        sender: 'milo',
-        text: response.data.message.trim()
-      };
-
-      setMessagesForTab(prev => [...prev, aiMessage]);
-
-      const extractedLabs = extractLabValues(textToSend);
-      if (selectedPatient &&
-          (extractedLabs.estradiol || extractedLabs.progesterone || extractedLabs.dhea)) {
-        const labEntry = {
-          date: new Date().toISOString().split('T')[0],
-          values: extractedLabs,
-          recommendation: aiMessage.text
-        };
-
-        await updateDoc(doc(db, 'patients', selectedPatient.id), {
-          labs: arrayUnion(labEntry)
-        });
-
-        setSelectedPatient(prev => ({
-          ...prev,
-          labs: [...(prev?.labs || []), labEntry]
-        }));
-      }
-    } catch (err) {
-      console.error('OpenAI API error:', err);
-      setMessagesForTab(prev => [
-        ...prev,
-        { sender: 'milo', text: "There was a problem retrieving a response. Please try again." }
-      ]);
-    }
-
-    setLoading(false);
+  // 🛠 First: Log the payload
+  const payload = {
+    model,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      ...getMessagesForTab.map(m => ({
+        role: m.sender === 'user' ? 'user' : 'assistant',
+        content: m.text
+      })),
+      { role: 'user', content: textToSend.trim() }
+    ],
+    temperature: 0.2
   };
-  // ✅ Handle file upload
+
+  console.log("🚀 Payload being sent to backend:", payload);
+
+  // 🚀 Then: Actually send it
+  const response = await axios.post('/api/milo', payload);
+
+  // 🔥 Now safely access the result
+  if (response.data.error) {
+    console.error("Backend returned an error:", response.data.error);
+    throw new Error(response.data.error);
+  }
+
+  const aiMessage = {
+    sender: 'milo',
+    text: response.data.message.trim()
+  };
+
+  setMessagesForTab(prev => [...prev, aiMessage]);
+
+  const extractedLabs = extractLabValues(textToSend);
+  if (
+    selectedPatient &&
+    (extractedLabs.estradiol || extractedLabs.progesterone || extractedLabs.dhea)
+  ) {
+    const labEntry = {
+      date: new Date().toISOString().split('T')[0],
+      values: extractedLabs,
+      recommendation: aiMessage.text
+    };
+
+    await updateDoc(doc(db, 'patients', selectedPatient.id), {
+      labs: arrayUnion(labEntry)
+    });
+
+    setSelectedPatient(prev => ({
+      ...prev,
+      labs: [...(prev?.labs || []), labEntry]
+    }));
+  }
+} catch (err) {
+  console.error('OpenAI API error:', err);
+  setMessagesForTab(prev => [
+    ...prev,
+    {
+      sender: 'milo',
+      text: "There was a problem retrieving a response. Please try again."
+    }
+  ]);
+}
+
+setLoading(false);
+
+  };
+
+
   const handleFileUpload = async (e) => {
     const file = e.target.files?.[0];
     console.log("📎 File selected:", file);
-
+  
     if (!file || !selectedPatient) {
       console.warn("⚠️ No file or patient selected.");
       return;
     }
-
+  
     setUploading(true);
     try {
       let text = '';
-
+  
       if (file.type === 'application/pdf') {
         console.log("📄 PDF upload detected. Attempting to extract...");
         try {
           text = await extractTextFromPDF(file);
-          console.log("✅ Extracted PDF text:", text.slice(0, 300));
+          console.log("✅ Extracted PDF text:", text.slice(0, 300)); // limit output
         } catch (err) {
           console.error("❌ PDF extraction failed:", err);
           alert("Failed to extract text from PDF. Please try a .txt file or check the file format.");
@@ -273,25 +288,26 @@ function App() {
         text = await file.text();
         console.log("✅ Extracted TXT text:", text.slice(0, 300));
       }
-
+  
       await sendMessage(text, 'lab');
     } catch (err) {
       console.error("🚨 Error during file handling:", err);
       alert("Something went wrong while uploading the file.");
     }
-
+  
     setUploading(false);
-  };
+  };  
 
-  // ✅ Handle adding a new patient
   const handleNewPatient = async () => {
     if (!newPatientName.trim() || !userInfo?.teamId) return;
+
 
     const docRef = await addDoc(collection(db, 'patients'), {
       name: newPatientName.trim(),
       labs: [],
       teamId: userInfo.teamId
     });
+
 
     const newPatient = {
       id: docRef.id,
@@ -300,54 +316,55 @@ function App() {
       teamId: userInfo.teamId
     };
 
+
     setSelectedPatient(newPatient);
     setAskMessages([]);
     setLabMessages([]);
   };
 
-  // ✅ Render messages with Download PDF button
-  const renderChatMessages = (msgList) => (
-    <div className="bg-milo-dark border border-gray-700 rounded-xl h-[60vh] overflow-y-auto p-4 mb-4 shadow-inner text-white">
-      {msgList.map((msg, i) => (
+const renderChatMessages = (msgList) => (
+  <div className="bg-milo-dark border border-gray-700 rounded-xl h-[60vh] overflow-y-auto p-4 mb-4 shadow-inner text-white">
+    {msgList.map((msg, i) => (
+      <div
+        key={i}
+        className={`mb-4 max-w-2xl ${msg.sender === 'user' ? 'ml-auto text-right' : 'mr-auto text-left'}`}
+      >
         <div
-          key={i}
-          className={`mb-4 max-w-2xl ${msg.sender === 'user' ? 'ml-auto text-right' : 'mr-auto text-left'}`}
+          className={`inline-block px-4 py-2 rounded-xl text-sm shadow-md ${
+            msg.sender === 'user'
+              ? 'bg-gradient-to-br from-blue-500 to-blue-900 text-white'
+              : 'bg-milo-glass backdrop-blur-md text-white border border-gray-600'
+          }`}
         >
-          <div
-            className={`inline-block px-4 py-2 rounded-xl text-sm shadow-md ${
-              msg.sender === 'user'
-                ? 'bg-gradient-to-br from-blue-500 to-blue-900 text-white'
-                : 'bg-milo-glass backdrop-blur-md text-white border border-gray-600'
-            }`}
-          >
-            <ReactMarkdown>{msg.text}</ReactMarkdown>
+          <ReactMarkdown>{msg.text}</ReactMarkdown>
 
-            {/* ✅ Only show "Download PDF" button on MILO responses */}
-            {msg.sender === 'milo' && (
-              <div className="mt-2 text-right">
-                <button
-                  className="text-xs text-blue-400 hover:text-blue-600 underline"
-                  onClick={() => downloadAsPDF(msg.text)}
-                >
-                  Download PDF
-                </button>
-              </div>
-            )}
-          </div>
+          {/* ✅ NEW: Only show "Download PDF" button next to MILO responses */}
+          {msg.sender === 'milo' && (
+            <div className="mt-2 text-right">
+              <button
+                className="text-xs text-blue-400 hover:text-blue-600 underline"
+                onClick={() => downloadAsPDF(msg.text)}
+              >
+                Download PDF
+              </button>
+            </div>
+          )}
         </div>
-      ))}
-      {loading && (
-        <div className="text-sm text-gray-400 italic flex items-center gap-2 mt-2">
-          MILO is thinking
-          <span className="flex gap-1">
-            <span className="animate-pulseDot">.</span>
-            <span className="animate-pulseDot delay-100">.</span>
-            <span className="animate-pulseDot delay-200">.</span>
-          </span>
-        </div>
-      )}
-    </div>
-  );
+      </div>
+    ))}
+    {loading && (
+      <div className="text-sm text-gray-400 italic flex items-center gap-2 mt-2">
+        MILO is thinking
+        <span className="flex gap-1">
+          <span className="animate-pulseDot">.</span>
+          <span className="animate-pulseDot delay-100">.</span>
+          <span className="animate-pulseDot delay-200">.</span>
+        </span>
+      </div>
+    )}
+  </div>
+);
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
@@ -387,12 +404,12 @@ function App() {
       </div>
     );
   }
-
   return (
     <div className="min-h-screen bg-milo-dark text-white font-sans px-4 py-6 md:px-12 lg:px-24">
       <h1 className="text-4xl font-heading mb-8 text-center text-milo-neon tracking-wide">
         MILO • Clinical Assistant
       </h1>
+
 
       <div className="flex space-x-4 justify-center mb-6">
         {['ask', 'lab', 'patients'].map(tab => (
@@ -409,6 +426,7 @@ function App() {
           </button>
         ))}
       </div>
+
 
       {activeTab === 'ask' && (
         <>
@@ -430,6 +448,7 @@ function App() {
           </div>
         </>
       )}
+
 
       {activeTab === 'lab' && (
         <>
@@ -473,6 +492,7 @@ function App() {
         </>
       )}
 
+
       {activeTab === 'patients' && (
         <>
           <h2 className="text-2xl font-semibold mb-4">Patient Manager</h2>
@@ -490,6 +510,7 @@ function App() {
               New Patient
             </button>
           </div>
+
 
           {patientMode === 'select' && (
             <>
@@ -520,6 +541,7 @@ function App() {
             </>
           )}
 
+
           {patientMode === 'create' && (
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-2">
               <input
@@ -542,5 +564,6 @@ function App() {
     </div>
   );
 }
+
 
 export default App;
