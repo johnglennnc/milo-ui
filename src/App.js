@@ -41,7 +41,11 @@ function extractLabValues(text) {
 // ✅ Function to download text as PDF
 const downloadAsPDF = (text) => {
   const element = document.createElement('div');
-  element.innerHTML = `<pre style="font-family: Arial, sans-serif;">${text}</pre>`;
+  element.innerHTML = `
+    <div style="font-family: Arial, sans-serif; padding-bottom: 40px;">
+      <pre>${text}</pre>
+    </div>
+  `;
 
   html2pdf()
     .from(element)
