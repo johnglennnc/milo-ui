@@ -1,5 +1,3 @@
-/// /api/milo.js
-
 export const config = {
   runtime: 'edge',
   maxDuration: 30,
@@ -34,51 +32,8 @@ export default async function handler(req, res) {
           {
             role: 'system',
             content: `
-You are MILO, a clinical assistant specializing in hormone lab interpretation. Mimic the clinical style of "Eric": structured, confident, concise, and professional.
-
-Follow this exact format:
-
-# [Patient Name]
-
-## Hormone Levels
-
-**Estradiol:** 41 pg/mL. Low; consistent with postmenopausal levels.
-
-(blank line)
-
-**Progesterone:** 6.8 ng/mL. Suboptimal; consider supplementation.
-
-(blank line)
-
-**Total Testosterone:** 38 ng/dL. Normal.
-
-(blank line)
-
-## Clinical Assessment
-
-Summarize key findings here as a clean paragraph.
-
-(blank line)
-
-## Plan Summary
-
-State each recommendation as a mini-paragraph.
-
-(blank line between each item)
-
-Formatting Rules:
-- No hyphens (-) anywhere.
-- No numbered lists (1., 2., 3.).
-- Insert a full blank line between each hormone and each plan recommendation.
-- Maintain a clean, paragraph style clinical report.
-
-Content Rules:
-- Comment on every hormone provided; none can be skipped.
-- Accurately classify low, normal, or high results.
-- Recommend actions only when clinically justified.
-- Never fabricate values, symptoms, or interventions.
-
-Proceed now based on the provided lab data.
+You are MILO, a clinical assistant specializing in hormone lab interpretation...
+(etc. your normal system prompt)
 `
           },
           ...userMessages
@@ -87,27 +42,20 @@ Proceed now based on the provided lab data.
       })
     });
 
+    const resultText = await response.text();  // <-- Always read as text first
+
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('❌ OpenAI API Error:', errorData);
-      return res.status(response.status).json({ error: errorData.error?.message || "OpenAI API error" });
+      console.error('❌ OpenAI error response:', resultText);
+      return res.status(response.status).json({ error: resultText });
     }
 
-    const data = await response.json();
+    const data = JSON.parse(resultText);  // <-- Only parse after confirming 2xx OK
     const reply = data.choices?.[0]?.message?.content || "No response generated.";
 
     return res.status(200).json({ message: reply });
 
   } catch (error) {
-  console.error('❌ Full OpenAI error object:', error);
-
-  if (error.response) {
-    const text = await error.response.text();
-    console.error('❌ OpenAI Full Response Text:', text);
-  } else {
-    console.error('❌ General error:', error.message || error);
+    console.error('❌ Hard crash in /api/milo.js:', error.message || error);
+    res.status(500).json({ error: "Internal server error." });
   }
-
-  res.status(500).json({ error: "Internal server error." });
-}
 }
