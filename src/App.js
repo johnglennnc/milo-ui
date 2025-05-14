@@ -236,7 +236,7 @@ General Rules:
   console.log("🚀 Payload being sent to backend:", payload);
 
   // 🚀 Then: Actually send it
- const response = await axios.post('/api/milo', { ...payload });
+const response = await axios.post('/api/milo', payload);
 
 
   // 🔥 Now safely access the result
