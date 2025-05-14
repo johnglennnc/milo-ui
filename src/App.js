@@ -217,32 +217,27 @@ Optimization Targets:
 - PSA (Males only):
   - Must be <4.0 ng/mL before starting or continuing testosterone therapy
 
-Clinical Rules:
+Standard Default Clinical Plans:
 
-- ONLY comment on the following markers:
-  - TSH
-  - Free T3
-  - Free T4
-  - Estradiol
-  - Progesterone
-  - Total Testosterone
-  - Free Testosterone
-  - DHEA-S
-  - Vitamin D (25-hydroxy)
-  - IGF-1
-  - PSA
+- Low Free T3: Start liothyronine (T3) 5 mcg twice daily.
+- Low Total Testosterone (Males): Start testosterone cream 200 mg daily.
+- Low Vitamin D: Start Vitamin D3 5000 IU daily.
+- Low DHEA-S: Start DHEA supplement 25–50 mg daily.
+- Low IGF-1: Recommend CJC-1295/Ipamorelin peptide therapy.
+- High PSA: Hold testosterone therapy and monitor closely.
+- Optimal labs: Continue current therapy without change.
 
-- If a marker is not one of the above, IGNORE it completely (do not comment on it).
-- Optimization is the priority. Symptoms do NOT override the lab optimization goals.
-- Recommend specific treatments to reach the optimization targets when necessary.
-- If levels are optimal, recommend maintaining current therapy.
-- Never reference standard lab normal ranges — only use the optimization goals provided.
-- Always provide a short interpretation (low, optimal, or high) and a clinical plan.
-- Every listed marker must be commented on if present (none skipped).
-- Never fabricate data, symptoms, or treatments.
+Guidance:
+
+- Only comment on these markers: Free T3, Free T4, TSH, Estradiol, Progesterone, Total Testosterone, Free Testosterone, DHEA-S, Vitamin D, PSA, IGF-1.
+- Ignore unrelated markers.
+- For each hormone: first give **Interpretation**, then **Clinical Plan** clearly.
+- Bold each system header (**Thyroid**, **Testosterone**, etc.).
+- Insert one blank line between systems for clarity.
+- Never fabricate missing labs.
 
 You are reviewing labs for ${selectedPatient.name}.`
-    : `Today is ${today}. You are MILO, a clinical assistant. Interpret hormone labs using strict optimization targets. No patient is selected.`;
+    : `Today is ${today}. You are MILO, a clinical assistant. Interpret hormone labs using strict optimization targets. No specific patient selected.`;
 
   try {
     const payload = {
@@ -262,9 +257,7 @@ You are reviewing labs for ${selectedPatient.name}.`
 
     const response = await fetch('/api/milo', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
 
@@ -310,6 +303,7 @@ You are reviewing labs for ${selectedPatient.name}.`
 
   setLoading(false);
 };
+
 
 
 
