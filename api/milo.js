@@ -26,7 +26,8 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'OpenAI-Beta': 'fine-tune'  // ✅ CRITICAL LINE
       },
       body: JSON.stringify({
         model,
