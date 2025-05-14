@@ -252,7 +252,6 @@ You are reviewing labs for ${selectedPatient.name}. Analyze the provided hormone
         role: m.sender === 'user' ? 'user' : 'assistant',
         content: m.text
       })),
-      { role: 'user', content: textToSend.trim() }
     ],
     temperature: 0.2
   };
