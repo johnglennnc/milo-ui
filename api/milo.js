@@ -99,19 +99,15 @@ Proceed now based on the provided lab data.
     return res.status(200).json({ message: reply });
 
   } catch (error) {
-    console.error('❌ Caught an error in /api/milo.js');
+  console.error('❌ Full OpenAI error object:', error);
 
-    if (error.response) {
-      try {
-        const errorData = await error.response.json();
-        console.error('❌ OpenAI API response error:', errorData);
-      } catch (parseError) {
-        console.error('❌ Failed to parse OpenAI error response:', parseError);
-      }
-    } else {
-      console.error('❌ General error:', error.message || error);
-    }
-
-    res.status(500).json({ error: "Internal server error." });
+  if (error.response) {
+    const text = await error.response.text();
+    console.error('❌ OpenAI Full Response Text:', text);
+  } else {
+    console.error('❌ General error:', error.message || error);
   }
+
+  res.status(500).json({ error: "Internal server error." });
+}
 }
