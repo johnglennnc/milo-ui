@@ -42,8 +42,8 @@ function extractLabValues(text) {
 const downloadAsPDF = (text) => {
   const element = document.createElement('div');
   element.innerHTML = `
-    <div style="font-family: Arial, sans-serif; padding-bottom: 40px;">
-      <pre>${text}</pre>
+    <div style="font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; white-space: pre-wrap; font-size: 12px; line-height: 1.6;">
+      <pre style="white-space: pre-wrap; font-family: inherit; font-size: inherit; line-height: inherit;">${text}</pre>
     </div>
   `;
 
