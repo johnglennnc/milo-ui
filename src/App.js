@@ -180,7 +180,7 @@ function App() {
 
     const useFineTuned = isLabRelated(textToSend);
     const model = useFineTuned
-      ? 'ft:gpt-3.5-turbo-0125:the-bad-company-holdings-llc::BKB3w2h2'
+      ? 'ft:gpt-3.5-turbo-0125:the-bad-company-holdings-llc:test-1-correct:BX6uV2ar'
       : 'gpt-4';
 
 
