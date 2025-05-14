@@ -162,37 +162,29 @@ function App() {
 
 
   const sendMessage = async (textToSend, fromTab = 'ask') => {
-    if (!textToSend?.trim()) return;
+  if (!textToSend?.trim()) return;
 
+  const isAskTab = fromTab === 'ask';
+  const userMessage = { sender: 'user', text: textToSend.trim() };
+  const setMessagesForTab = isAskTab ? setAskMessages : setLabMessages;
+  const getMessagesForTab = isAskTab ? askMessages : labMessages;
 
-    const isAskTab = fromTab === 'ask';
-    const userMessage = { sender: 'user', text: textToSend.trim() };
-    const setMessagesForTab = isAskTab ? setAskMessages : setLabMessages;
-    const getMessagesForTab = isAskTab ? askMessages : labMessages;
+  setMessagesForTab(prev => [...prev, userMessage]);
+  isAskTab ? setInput('') : setLabInput('');
+  setLoading(true);
 
+  const model = 'gpt-4'; // confirmed
 
-    setMessagesForTab(prev => [...prev, userMessage]);
+  const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-
-    isAskTab ? setInput('') : setLabInput('');
-    setLoading(true);
-
-
-    const model = 'gpt-4'; // or 'gpt-3.5-turbo-0125' if you prefer cheaper/faster
-
-    const today = new Date().toLocaleDateString('en-US', {
-      month: 'long', day: 'numeric', year: 'numeric'
-    });
-
-
-    const systemPrompt = selectedPatient
-  ? `You are MILO, a clinical assistant specializing in hormone optimization according to the clinical guidelines of Eric Kephart. Your job is to interpret lab reports and recommend treatment based on strict optimization targets.
+  const systemPrompt = selectedPatient
+    ? `You are MILO, a clinical assistant specializing in hormone optimization according to the clinical guidelines of Eric Kephart. Your job is to interpret lab reports and recommend treatment based on strict optimization targets.
 
 Optimization Targets:
 
 - Thyroid:
   - Free T3: Goal > 4.0 pg/mL
-  - Free T4: Normal range reference only; typically aim for ~1.0 ng/dL
+  - Free T4: Target ~1.0 ng/dL
   - TSH: Should decrease toward 1.0–2.0 uIU/mL when Free T3 is optimized
 
 - Estradiol (Postmenopausal Female):
@@ -209,7 +201,7 @@ Optimization Targets:
     - Free Testosterone Goal: 5–10 pg/mL
   - Males:
     - Total Testosterone Goal: ~1000 ng/dL
-    - Free Testosterone: High-normal preferred
+    - Free Testosterone Goal: High-normal preferred
 
 - DHEA-S:
   - Females: 150–200 ug/dL
@@ -220,95 +212,83 @@ Optimization Targets:
 
 - IGF-1:
   - Goal: >200 ng/mL
-  - Peptide therapy considered if persistently low after hormone optimization
+  - Consider peptide therapy if persistently low after hormone optimization
 
-- PSA (Male only):
+- PSA (Males only):
   - Must be <4.0 ng/mL before starting or continuing testosterone therapy
 
 Clinical Rules:
 
 - Optimization is the priority. Symptoms do NOT override the lab optimization goals.
-- If levels are suboptimal, recommend treatment to achieve the target range.
-- If levels are optimal, recommend maintaining current therapy and monitoring.
-- Never reference standard lab normal ranges. Only use the optimization targets above.
-- Every hormone listed in the lab report must be commented on (none skipped).
+- Recommend treatment to achieve the optimization targets.
+- If levels are optimal, recommend maintaining therapy.
+- Never reference standard lab ranges.
 - Always provide a short interpretation (low, optimal, or high) and a clinical plan.
+- Every hormone listed must be commented on (none skipped).
 - Never fabricate data, symptoms, or treatments.
 
-You are reviewing labs for ${selectedPatient.name}. Analyze the provided hormone values and create a concise, structured clinical report accordingly.`
-  : `You are MILO, a clinical assistant. Interpret hormone labs using optimization philosophy. No specific patient selected.`;
+You are reviewing labs for ${selectedPatient.name}.`
+    : `Today is ${today}. You are MILO, a clinical assistant. Interpret hormone labs using strict optimization targets. No patient is selected.`;
 
-
-
-
-
-    try {
-  // 🛠 First: Log the payload
-  const payload = {
-    model,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      ...getMessagesForTab.map(m => ({
-        role: m.sender === 'user' ? 'user' : 'assistant',
-        content: m.text
-      })),
-    ],
-    temperature: 0.2
-  };
-
-  console.log("🚀 Payload being sent to backend:", payload);
-
-  // 🚀 Then: Actually send it
-const response = await axios.post('/api/milo', payload);
-
-
-  // 🔥 Now safely access the result
-  if (response.data.error) {
-    console.error("Backend returned an error:", response.data.error);
-    throw new Error(response.data.error);
-  }
-
-  const aiMessage = {
-    sender: 'milo',
-    text: response.data.message.trim()
-  };
-
-  setMessagesForTab(prev => [...prev, aiMessage]);
-
-  const extractedLabs = extractLabValues(textToSend);
-  if (
-    selectedPatient &&
-    (extractedLabs.estradiol || extractedLabs.progesterone || extractedLabs.dhea)
-  ) {
-    const labEntry = {
-      date: new Date().toISOString().split('T')[0],
-      values: extractedLabs,
-      recommendation: aiMessage.text
+  try {
+    const payload = {
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...getMessagesForTab.map(m => ({
+          role: m.sender === 'user' ? 'user' : 'assistant',
+          content: m.text
+        })),
+        { role: 'user', content: textToSend.trim() }
+      ],
+      temperature: 0.2
     };
 
-    await updateDoc(doc(db, 'patients', selectedPatient.id), {
-      labs: arrayUnion(labEntry)
-    });
+    console.log("🚀 Payload being sent to backend:", payload);
 
-    setSelectedPatient(prev => ({
-      ...prev,
-      labs: [...(prev?.labs || []), labEntry]
-    }));
-  }
-} catch (err) {
-  console.error('OpenAI API error:', err);
-  setMessagesForTab(prev => [
-    ...prev,
-    {
-      sender: 'milo',
-      text: "There was a problem retrieving a response. Please try again."
+    const response = await axios.post('/api/milo', payload);
+
+    if (response.data.error) {
+      console.error("Backend returned an error:", response.data.error);
+      throw new Error(response.data.error);
     }
-  ]);
-}
 
-setLoading(false);
+    const aiMessage = {
+      sender: 'milo',
+      text: response.data.message.trim()
+    };
 
-  };
+    setMessagesForTab(prev => [...prev, aiMessage]);
+
+    const extractedLabs = extractLabValues(textToSend);
+    if (selectedPatient && (extractedLabs.estradiol || extractedLabs.progesterone || extractedLabs.dhea)) {
+      const labEntry = {
+        date: new Date().toISOString().split('T')[0],
+        values: extractedLabs,
+        recommendation: aiMessage.text
+      };
+
+      await updateDoc(doc(db, 'patients', selectedPatient.id), {
+        labs: arrayUnion(labEntry)
+      });
+
+      setSelectedPatient(prev => ({
+        ...prev,
+        labs: [...(prev?.labs || []), labEntry]
+      }));
+    }
+  } catch (err) {
+    console.error('OpenAI API error:', err);
+    setMessagesForTab(prev => [
+      ...prev,
+      { sender: 'milo', text: "There was a problem retrieving a response. Please try again." }
+    ]);
+  }
+
+  setLoading(false);
+};
+
+
 
 
   const handleFileUpload = async (e) => {
