@@ -178,11 +178,7 @@ function App() {
     setLoading(true);
 
 
-    const useFineTuned = isLabRelated(textToSend);
-    const model = useFineTuned
-      ? 'ft:gpt-3.5-turbo-0125:the-bad-company-holdings-llc:test-1-correct:BX6uV2ar'
-      : 'gpt-4';
-
+    const model = 'gpt-4'; // or 'gpt-3.5-turbo-0125' if you prefer cheaper/faster
 
     const today = new Date().toLocaleDateString('en-US', {
       month: 'long', day: 'numeric', year: 'numeric'
