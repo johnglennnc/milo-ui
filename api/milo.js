@@ -1,3 +1,5 @@
+/// /api/milo.js
+
 export const config = {
   runtime: 'edge',
   maxDuration: 30,
@@ -30,32 +32,28 @@ export default async function handler(req, res) {
         model,
         messages: [
           {
-            role: 'system',
-            content: `
-You are MILO, a clinical assistant specializing in hormone lab interpretation...
-(etc. your normal system prompt)
-`
-          },
-          ...userMessages
+            role: 'user',
+            content: userMessages[userMessages.length - 1]?.content || ''
+          }
         ],
         temperature: temperature || 0.2
       })
     });
 
-    const resultText = await response.text();  // <-- Always read as text first
+    const resultText = await response.text();
 
     if (!response.ok) {
-      console.error('❌ OpenAI error response:', resultText);
+      console.error('❌ OpenAI raw error response:', resultText);
       return res.status(response.status).json({ error: resultText });
     }
 
-    const data = JSON.parse(resultText);  // <-- Only parse after confirming 2xx OK
+    const data = JSON.parse(resultText);
     const reply = data.choices?.[0]?.message?.content || "No response generated.";
 
     return res.status(200).json({ message: reply });
 
   } catch (error) {
-    console.error('❌ Hard crash in /api/milo.js:', error.message || error);
+    console.error('❌ Hard crash error in /api/milo.js:', error.message || error);
     res.status(500).json({ error: "Internal server error." });
   }
 }
