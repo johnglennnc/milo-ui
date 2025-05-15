@@ -39,10 +39,26 @@ function extractLabValues(text) {
 }
 
 // ✅ Function to download text as PDF
-const downloadAsPDF = (text) => {
+const downloadAsPDF = (text, patient = null, labEntry = null) => {
+  const header = patient ? `
+    <div style="margin-bottom: 20px;">
+      <strong>Patient Name:</strong> ${patient.name || 'N/A'}<br/>
+      <strong>Date of Birth:</strong> ${patient.dob || 'N/A'}
+    </div>
+  ` : '';
+
+  const labs = labEntry ? `
+    <div style="margin-bottom: 20px;">
+      <strong>Lab Values:</strong><br/>
+      <pre>${JSON.stringify(labEntry.values, null, 2)}</pre>
+    </div>
+  ` : '';
+
   const element = document.createElement('div');
   element.innerHTML = `
     <div style="font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; white-space: pre-wrap; font-size: 12px; line-height: 1.6;">
+      ${header}
+      ${labs}
       <pre style="white-space: pre-wrap; font-family: inherit; font-size: inherit; line-height: inherit;">${text}</pre>
     </div>
   `;
@@ -57,6 +73,7 @@ const downloadAsPDF = (text) => {
     })
     .save();
 };
+
 
 // ✅ Main App starts
 function App() {
@@ -390,11 +407,11 @@ const renderChatMessages = (msgList) => (
           {msg.sender === 'milo' && (
             <div className="mt-2 text-right">
               <button
-                className="text-xs text-blue-400 hover:text-blue-600 underline"
-                onClick={() => downloadAsPDF(msg.text)}
-              >
-                Download PDF
-              </button>
+  className="text-xs text-blue-400 hover:text-blue-600 underline"
+  onClick={() => downloadAsPDF(msg.text, selectedPatient, selectedPatient?.labs?.slice(-1)[0] || null)}
+>
+  Download PDF
+</button>
             </div>
           )}
         </div>
