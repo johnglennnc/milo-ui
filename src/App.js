@@ -40,17 +40,36 @@ function extractLabValues(text) {
 
 // ✅ Function to download text as PDF
 const downloadAsPDF = (text, patient = null, labEntry = null) => {
+  const formatDate = (isoString) => {
+    const date = new Date(isoString);
+    if (isNaN(date)) return 'N/A';
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${month}/${day}/${year}`;
+  };
+
+  const todayFormatted = formatDate(new Date().toISOString());
+  const dobFormatted = patient?.dob ? formatDate(patient.dob) : 'N/A';
+
+  const labValuesFormatted = labEntry?.values
+    ? Object.entries(labEntry.values)
+        .map(([key, value]) => `- ${key.toUpperCase()}: ${value}`)
+        .join('<br/>')
+    : 'No lab values available.';
+
   const header = patient ? `
     <div style="margin-bottom: 20px;">
       <strong>Patient Name:</strong> ${patient.name || 'N/A'}<br/>
-      <strong>Date of Birth:</strong> ${patient.dob || 'N/A'}
+      <strong>Date of Birth:</strong> ${dobFormatted}<br/>
+      <strong>Report Date:</strong> ${todayFormatted}
     </div>
   ` : '';
 
   const labs = labEntry ? `
     <div style="margin-bottom: 20px;">
       <strong>Lab Values:</strong><br/>
-      <pre>${JSON.stringify(labEntry.values, null, 2)}</pre>
+      ${labValuesFormatted}
     </div>
   ` : '';
 
