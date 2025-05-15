@@ -1,0 +1,26 @@
+Comprehensive Hormone Panel – Male Patient
+
+Patient: John Doe
+DOB: 07/15/1985
+Collection Date: 05/15/2025
+LabCorp
+
+---
+
+Thyroid Panel:
+- TSH: 2.5 uIU/mL (0.45 - 4.50)
+- Free T4: 1.1 ng/dL (0.82 - 1.77)
+- Free T3: 3.1 pg/mL (2.0 - 4.4)
+
+Hormones:
+- Estradiol: 25 pg/mL (normal: 10-40)
+- Progesterone: 0.7 ng/mL (normal: 0.1-1.0)
+- Total Testosterone: 320 ng/dL (normal: 300-1000)
+- Free Testosterone: 6.5 pg/mL (normal: 5-15)
+- DHEA-S: 180 ug/dL (normal: 100-400)
+- Vitamin D (25-OH): 21 ng/mL (optimal >50)
+- IGF-1: 110 ng/mL (normal range for age group)
+
+Supplements:
+- Zinc: 65 ug/dL (normal: 60-120)
+- Magnesium: 2.1 mg/dL (normal: 1.7-2.2)

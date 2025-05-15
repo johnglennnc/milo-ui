@@ -68,6 +68,7 @@ function App() {
   const [patients, setPatients] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [newPatientName, setNewPatientName] = useState('');
+  const [newPatientDOB, setNewPatientDOB] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [input, setInput] = useState('');
   const [labInput, setLabInput] = useState('');
@@ -346,28 +347,28 @@ You are reviewing labs for ${selectedPatient.name}.`
   };  
 
   const handleNewPatient = async () => {
-    if (!newPatientName.trim() || !userInfo?.teamId) return;
+  if (!newPatientName.trim() || !userInfo?.teamId) return;
 
+  const docRef = await addDoc(collection(db, 'patients'), {
+    name: newPatientName.trim(),
+    dob: newPatientDOB.trim(),   // <-- Add DOB here
+    labs: [],
+    teamId: userInfo.teamId
+  });
 
-    const docRef = await addDoc(collection(db, 'patients'), {
-      name: newPatientName.trim(),
-      labs: [],
-      teamId: userInfo.teamId
-    });
-
-
-    const newPatient = {
-      id: docRef.id,
-      name: newPatientName.trim(),
-      labs: [],
-      teamId: userInfo.teamId
-    };
-
-
-    setSelectedPatient(newPatient);
-    setAskMessages([]);
-    setLabMessages([]);
+  const newPatient = {
+    id: docRef.id,
+    name: newPatientName.trim(),
+    dob: newPatientDOB.trim(),  // <-- Add DOB here
+    labs: [],
+    teamId: userInfo.teamId
   };
+
+  setSelectedPatient(newPatient);
+  setAskMessages([]);
+  setLabMessages([]);
+};
+
 
 const renderChatMessages = (msgList) => (
   <div className="bg-milo-dark border border-gray-700 rounded-xl h-[60vh] overflow-y-auto p-4 mb-4 shadow-inner text-white">
@@ -590,22 +591,29 @@ const renderChatMessages = (msgList) => (
 
 
           {patientMode === 'create' && (
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-2">
-              <input
-                type="text"
-                placeholder="New patient name"
-                value={newPatientName}
-                onChange={e => setNewPatientName(e.target.value)}
-                className="bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white"
-              />
-              <button
-                onClick={handleNewPatient}
-                className="bg-green-600 text-white px-4 py-2 rounded hover:scale-105"
-              >
-                Add Patient
-              </button>
-            </div>
-          )}
+  <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-2">
+    <input
+      type="text"
+      placeholder="New patient name"
+      value={newPatientName}
+      onChange={e => setNewPatientName(e.target.value)}
+      className="bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white"
+    />
+    <input
+      type="date"
+      placeholder="Date of Birth"
+      value={newPatientDOB}
+      onChange={e => setNewPatientDOB(e.target.value)}
+      className="bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white"
+    />
+    <button
+      onClick={handleNewPatient}
+      className="bg-green-600 text-white px-4 py-2 rounded hover:scale-105"
+    >
+      Add Patient
+    </button>
+  </div>
+)}
         </>
       )}
     </div>
