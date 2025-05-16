@@ -1,8 +1,9 @@
 // src/utils/pdfReader.js
-import * as pdfjsLib from 'pdfjs-dist';
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.entry';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
+import workerSrc from 'pdfjs-dist/legacy/build/pdf.worker.entry';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+
 
 export async function extractTextFromPDF(file) {
   try {
@@ -24,3 +25,4 @@ export async function extractTextFromPDF(file) {
     return '';
   }
 }
+
