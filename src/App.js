@@ -4,7 +4,6 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import html2pdf from 'html2pdf.js';
 import { auth } from './firebase';
-import { extractTextFromPDF } from './utils/pdfReader';
 import { generateLabPDF } from './utils/pdfGenerator';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from './firebase';
