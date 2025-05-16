@@ -20,7 +20,7 @@ import {
   query,
   where
 } from 'firebase/firestore';
-import { extractTextFromPDF } from './utils/pdfReader';
+import { extractTextHybrid } from './utils/hybridReader';
 
 
 // ✅ Function to extract lab values
@@ -348,42 +348,33 @@ You are reviewing labs for ${selectedPatient.name}.`
 
 
   const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0];
-    console.log("📎 File selected:", file);
-  
-    if (!file || !selectedPatient) {
-      console.warn("⚠️ No file or patient selected.");
-      return;
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  console.log("📎 File selected:", file.name);
+  setUploading(true);
+
+  try {
+    let text = '';
+
+    if (file.type === 'application/pdf') {
+      console.log("📄 PDF upload detected. Attempting to extract...");
+      text = await extractTextHybrid(file);
+      console.log("📎 Extracted PDF Text (first 500 chars):", text.slice(0, 500));
+    } else {
+      text = await file.text();
+      console.log("✅ Extracted TXT text:", text.slice(0, 300));
     }
-  
-    setUploading(true);
-    try {
-      let text = '';
-  
-      if (file.type === 'application/pdf') {
-        console.log("📄 PDF upload detected. Attempting to extract...");
-        try {
-          text = await extractTextFromPDF(file);
-                  console.log("📎 Extracted PDF Text (first 500 chars):", text.slice(0, 500));
-          console.log("✅ Extracted PDF text:", text.slice(0, 300)); // limit output
-        } catch (err) {
-          console.error("❌ PDF extraction failed:", err);
-          alert("Failed to extract text from PDF. Please try a .txt file or check the file format.");
-          return;
-        }
-      } else {
-        text = await file.text();
-        console.log("✅ Extracted TXT text:", text.slice(0, 300));
-      }
-  
-      await sendMessage(text, 'lab');
-    } catch (err) {
-      console.error("🚨 Error during file handling:", err);
-      alert("Something went wrong while uploading the file.");
-    }
-  
-    setUploading(false);
-  };  
+
+    await sendMessage(text, 'lab');
+  } catch (err) {
+    console.error("🚨 Error during file handling:", err);
+    alert("Something went wrong while uploading the file.");
+  }
+
+  setUploading(false);
+};
+
 
   const handleNewPatient = async () => {
   if (!newPatientName.trim() || !userInfo?.teamId) return;
