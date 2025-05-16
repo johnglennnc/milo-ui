@@ -448,6 +448,48 @@ const renderChatMessages = (msgList) => (
     )}
   </div>
 );
+const handleLogin = async (e) => {
+  e.preventDefault();
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, loginUsername, loginPassword);
+    const uid = userCredential.user.uid;
+    const userDoc = await getDoc(doc(db, 'users', uid));
+    if (!userDoc.exists()) {
+      alert("User metadata not found. Contact admin.");
+      return;
+    }
+    const data = userDoc.data();
+    setUserInfo({ uid, ...data });
+    setIsAuthenticated(true);
+  } catch (err) {
+    console.error("🔥 Firebase login error:", err.code, err.message);
+    alert("Login failed: " + err.message);
+  }
+};
+
+const handleSignUp = async (e) => {
+  e.preventDefault();
+  try {
+    const userCredential = await createUserWithEmailAndPassword(auth, loginUsername, loginPassword);
+    const uid = userCredential.user.uid;
+    await setDoc(doc(db, 'users', uid), {
+      role: 'doctor',
+      teamId: `team_${loginUsername.split('@')[0]}`,
+      name: loginUsername.split('@')[0]
+    });
+    setUserInfo({
+      uid,
+      role: 'doctor',
+      teamId: `team_${loginUsername.split('@')[0]}`,
+      name: loginUsername.split('@')[0]
+    });
+    setIsAuthenticated(true);
+    alert('Account created successfully!');
+  } catch (err) {
+    console.error("🔥 Signup error:", err.code, err.message);
+    alert("Signup failed: " + err.message);
+  }
+};
 
   if (!isAuthenticated) {
     return (
