@@ -150,55 +150,7 @@ function App() {
     return () => unsubscribe();
   }, [userInfo]);
 
-  // ✅ Your App code continues here normally...
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, loginUsername, loginPassword);
-      const uid = userCredential.user.uid;
-      const userDoc = await getDoc(doc(db, 'users', uid));
-      if (!userDoc.exists()) {
-        alert("User metadata not found. Contact admin.");
-        return;
-      }
-      const data = userDoc.data();
-      setUserInfo({ uid, ...data });
-      setIsAuthenticated(true);
-    } catch (err) {
-      console.error("🔥 Firebase login error:", err.code, err.message);
-      alert("Login failed: " + err.message);
-    }
-  };
-
-
-  const handleSignUp = async (e) => {
-    e.preventDefault();
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, loginUsername, loginPassword);
-      const uid = userCredential.user.uid;
-      await setDoc(doc(db, 'users', uid), {
-        role: 'doctor',
-        teamId: `team_${loginUsername.split('@')[0]}`,
-        name: loginUsername.split('@')[0]
-      });
-      setUserInfo({
-        uid,
-        role: 'doctor',
-        teamId: `team_${loginUsername.split('@')[0]}`,
-        name: loginUsername.split('@')[0]
-      });
-      setIsAuthenticated(true);
-      alert('Account created successfully!');
-    } catch (err) {
-      console.error("🔥 Signup error:", err.code, err.message);
-      alert("Signup failed: " + err.message);
-    }
-  };
-  const isLabRelated = (text) => {
-    const labKeywords = ['estradiol', 'progesterone', 'dhea', 'lab', 'testosterone', 'hormone', 'pg/ml', 'ng/ml'];
-    return labKeywords.some(k => text.toLowerCase().includes(k));
-  };
-
+  // ✅ MILO Validation Logic
 function validateMILOResponse(text) {
   const issues = [];
 
@@ -208,32 +160,32 @@ function validateMILOResponse(text) {
     const totalTValue = parseFloat(totalTMatch[1]);
     const callsItNormal = /total testosterone.*?(normal|within (range|goal))/i.test(text);
     if (totalTValue < 900 && callsItNormal) {
-      issues.push(`⚠️ Total Testosterone is ${totalTValue}, which is below Eric’s ~1000 ng/dL goal, but it's called "normal".`);
+      issues.push(`⚠️ Total Testosterone is ${totalTValue}, below Eric’s ~1000 ng/dL goal, but labeled "normal".`);
     }
   }
 
-  // Check for Free Testosterone > 200 and not recommending dose reduction
+  // Check for Free Testosterone > 200 without suggesting reduction
   const freeTMatch = text.match(/free testosterone.*?(\d{3})(\.\d+)?/i);
   if (freeTMatch) {
     const freeTValue = parseFloat(freeTMatch[1]);
     const noReduction = !/dose reduction|reduce|lower.*free testosterone/i.test(text);
     if (freeTValue > 200 && noReduction) {
-      issues.push(`⚠️ Free Testosterone is ${freeTValue}, above Eric’s 150–200 pg/mL goal, but no dose reduction is mentioned.`);
+      issues.push(`⚠️ Free Testosterone is ${freeTValue}, above the 150–200 pg/mL goal, but no reduction is mentioned.`);
     }
   }
 
-  // Optional: Flag if "normal range" is used at all
+  // Flag "normal range" usage
   if (text.toLowerCase().includes("normal range")) {
-    issues.push("⚠️ Phrase 'normal range' detected — responses should only reference Eric’s optimization goals.");
+    issues.push("⚠️ Phrase 'normal range' detected — only use Eric’s optimization goals.");
   }
 
-  // Show alert and console warning if issues exist
   if (issues.length) {
     console.warn("🚨 MILO Response Validation Issues:", issues);
     alert("⚠️ MILO response may need review:\n\n" + issues.join("\n"));
   }
 }
 
+  // ✅ Your App code continues here normally...
   const sendMessage = async (textToSend, fromTab = 'ask') => {
   if (!textToSend?.trim()) return;
 
@@ -241,27 +193,20 @@ function validateMILOResponse(text) {
   const userMessage = { sender: 'user', text: textToSend.trim() };
   const setMessagesForTab = isAskTab ? setAskMessages : setLabMessages;
   const getMessagesForTab = isAskTab ? askMessages : labMessages;
-  const aiMessage = {
-  sender: 'milo',
-  text: data.message.trim()
-};
-
-// 🔍 Run validation
-validateMILOResponse(aiMessage.text);
-
-setMessagesForTab(prev => [...prev, aiMessage]);
-
 
   setMessagesForTab(prev => [...prev, userMessage]);
   isAskTab ? setInput('') : setLabInput('');
   setLoading(true);
 
-  const model = 'gpt-4'; // confirmed
-
-  const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const model = 'gpt-4';
+  const today = new Date().toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
 
   const systemPrompt = selectedPatient
-  ? `You are MILO, a clinical assistant specializing in hormone optimization according to the clinical guidelines of Eric Kephart. Your job is to interpret lab reports and recommend treatment based on strict optimization targets.
+    ? `You are MILO, a clinical assistant specializing in hormone optimization according to the clinical guidelines of Eric Kephart. Your job is to interpret lab reports and recommend treatment based on strict optimization targets.
 
 Optimization Targets:
 
@@ -327,72 +272,74 @@ Formatting & Guidance:
 - Do not fabricate lab results or recommendations. Follow the structure strictly.
 
 You are reviewing labs for ${selectedPatient.name}.`
-  : `Today is ${today}. You are MILO, a clinical assistant. Interpret hormone labs using strict optimization targets. No specific patient selected.`;
+    : `Today is ${today}. You are MILO, a clinical assistant. Interpret hormone labs using strict optimization targets. No specific patient selected.`;
 
   try {
-  const payload = {
-    model,
-    messages: [
-      { role: 'system', content: systemPrompt },
-      ...getMessagesForTab.map(m => ({
-        role: m.sender === 'user' ? 'user' : 'assistant',
-        content: m.text
-      })),
-      { role: 'user', content: textToSend.trim() }
-    ],
-    temperature: 0.2
-  };
-
-  console.log("🚀 Payload being sent to backend:", payload);
-
-  const response = await fetch('/api/milo', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json();
-    console.error("Backend returned an error:", errorData.error);
-    throw new Error(errorData.error);
-  }
-
-  const data = await response.json(); // ✅ NOW it's safe to use `data`
-
-  const aiMessage = {
-    sender: 'milo',
-    text: data.message.trim()
-  };
-
-  // 🔍 Post-processing validation
-  validateMILOResponse(aiMessage.text);
-
-  setMessagesForTab(prev => [...prev, aiMessage]);
-
-  const extractedLabs = extractLabValues(textToSend);
-  if (selectedPatient && (extractedLabs.estradiol || extractedLabs.progesterone || extractedLabs.dhea)) {
-    const labEntry = {
-      date: new Date().toISOString().split('T')[0],
-      values: extractedLabs,
-      recommendation: aiMessage.text
+    const payload = {
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...getMessagesForTab.map(m => ({
+          role: m.sender === 'user' ? 'user' : 'assistant',
+          content: m.text
+        })),
+        { role: 'user', content: textToSend.trim() }
+      ],
+      temperature: 0.2
     };
 
-    await updateDoc(doc(db, 'patients', selectedPatient.id), {
-      labs: arrayUnion(labEntry)
+    console.log("🚀 Payload being sent to backend:", payload);
+
+    const response = await fetch('/api/milo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
 
-    setSelectedPatient(prev => ({
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Backend returned an error:", errorData.error);
+      throw new Error(errorData.error);
+    }
+
+    // ✅ Define `data` BEFORE using it
+    const data = await response.json();
+
+    const aiMessage = {
+      sender: 'milo',
+      text: data.message.trim()
+    };
+
+    // 🔍 Post-processing validation
+    validateMILOResponse(aiMessage.text);
+
+    setMessagesForTab(prev => [...prev, aiMessage]);
+
+    // ✅ Auto-extract and save lab values if applicable
+    const extractedLabs = extractLabValues(textToSend);
+    if (selectedPatient && (extractedLabs.estradiol || extractedLabs.progesterone || extractedLabs.dhea)) {
+      const labEntry = {
+        date: new Date().toISOString().split('T')[0],
+        values: extractedLabs,
+        recommendation: aiMessage.text
+      };
+
+      await updateDoc(doc(db, 'patients', selectedPatient.id), {
+        labs: arrayUnion(labEntry)
+      });
+
+      setSelectedPatient(prev => ({
+        ...prev,
+        labs: [...(prev?.labs || []), labEntry]
+      }));
+    }
+  } catch (err) {
+    console.error('OpenAI API error:', err);
+    setMessagesForTab(prev => [
       ...prev,
-      labs: [...(prev?.labs || []), labEntry]
-    }));
+      { sender: 'milo', text: "There was a problem retrieving a response. Please try again." }
+    ]);
   }
-} catch (err) {
-  console.error('OpenAI API error:', err);
-  setMessagesForTab(prev => [
-    ...prev,
-    { sender: 'milo', text: "There was a problem retrieving a response. Please try again." }
-  ]);
-}
 
   setLoading(false);
 };
