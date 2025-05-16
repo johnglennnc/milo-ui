@@ -361,10 +361,10 @@ You are reviewing labs for ${selectedPatient.name}.`
     try {
       let extractedText = '';
       if (file.type === 'application/pdf') {
-        extractedText = await extractTextHybrid(file);
-      } else {
-        extractedText = await file.text();
-      }
+  extractedText = await extractTextHybrid(file); // ✅ Use your actual extractor
+} else {
+  extractedText = await file.text();
+}
 
       newEntries.push({
         name: file.name,
