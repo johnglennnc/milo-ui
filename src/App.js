@@ -405,7 +405,8 @@ const triggerMILOAnalysis = async () => {
       ? `${contextBlock}\n\nNEW LAB REPORT:\n\n${newText}`
       : newText;
 
-    await sendMessage(combinedPrompt, 'lab');
+    console.log("📦 Final MILO prompt:", combinedPrompt);
+      await sendMessage(combinedPrompt, 'lab');
   } catch (err) {
     console.error("🧨 Error during multi-file analysis:", err);
     alert("Something went wrong analyzing the files.");
