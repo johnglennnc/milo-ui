@@ -330,66 +330,69 @@ You are reviewing labs for ${selectedPatient.name}.`
   : `Today is ${today}. You are MILO, a clinical assistant. Interpret hormone labs using strict optimization targets. No specific patient selected.`;
 
   try {
-    const payload = {
-      model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...getMessagesForTab.map(m => ({
-          role: m.sender === 'user' ? 'user' : 'assistant',
-          content: m.text
-        })),
-        { role: 'user', content: textToSend.trim() }
-      ],
-      temperature: 0.2
+  const payload = {
+    model,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      ...getMessagesForTab.map(m => ({
+        role: m.sender === 'user' ? 'user' : 'assistant',
+        content: m.text
+      })),
+      { role: 'user', content: textToSend.trim() }
+    ],
+    temperature: 0.2
+  };
+
+  console.log("🚀 Payload being sent to backend:", payload);
+
+  const response = await fetch('/api/milo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    console.error("Backend returned an error:", errorData.error);
+    throw new Error(errorData.error);
+  }
+
+  const data = await response.json(); // ✅ NOW it's safe to use `data`
+
+  const aiMessage = {
+    sender: 'milo',
+    text: data.message.trim()
+  };
+
+  // 🔍 Post-processing validation
+  validateMILOResponse(aiMessage.text);
+
+  setMessagesForTab(prev => [...prev, aiMessage]);
+
+  const extractedLabs = extractLabValues(textToSend);
+  if (selectedPatient && (extractedLabs.estradiol || extractedLabs.progesterone || extractedLabs.dhea)) {
+    const labEntry = {
+      date: new Date().toISOString().split('T')[0],
+      values: extractedLabs,
+      recommendation: aiMessage.text
     };
 
-    console.log("🚀 Payload being sent to backend:", payload);
-
-    const response = await fetch('/api/milo', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+    await updateDoc(doc(db, 'patients', selectedPatient.id), {
+      labs: arrayUnion(labEntry)
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Backend returned an error:", errorData.error);
-      throw new Error(errorData.error);
-    }
-
-    const data = await response.json();
-
-    const aiMessage = {
-      sender: 'milo',
-      text: data.message.trim()
-    };
-
-    setMessagesForTab(prev => [...prev, aiMessage]);
-
-    const extractedLabs = extractLabValues(textToSend);
-    if (selectedPatient && (extractedLabs.estradiol || extractedLabs.progesterone || extractedLabs.dhea)) {
-      const labEntry = {
-        date: new Date().toISOString().split('T')[0],
-        values: extractedLabs,
-        recommendation: aiMessage.text
-      };
-
-      await updateDoc(doc(db, 'patients', selectedPatient.id), {
-        labs: arrayUnion(labEntry)
-      });
-
-      setSelectedPatient(prev => ({
-        ...prev,
-        labs: [...(prev?.labs || []), labEntry]
-      }));
-    }
-  } catch (err) {
-    console.error('OpenAI API error:', err);
-    setMessagesForTab(prev => [
+    setSelectedPatient(prev => ({
       ...prev,
-      { sender: 'milo', text: "There was a problem retrieving a response. Please try again." }
-    ]);
+      labs: [...(prev?.labs || []), labEntry]
+    }));
   }
+} catch (err) {
+  console.error('OpenAI API error:', err);
+  setMessagesForTab(prev => [
+    ...prev,
+    { sender: 'milo', text: "There was a problem retrieving a response. Please try again." }
+  ]);
+}
 
   setLoading(false);
 };
