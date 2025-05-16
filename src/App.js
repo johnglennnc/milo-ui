@@ -1,4 +1,3 @@
-// DEBUG: trigger git to recognize changes
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
@@ -115,6 +114,8 @@ function App() {
   const [activeTab, setActiveTab] = useState('ask');
   const [patientMode, setPatientMode] = useState('select');
   const [userInfo, setUserInfo] = useState(null);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [pendingMiloTrigger, setPendingMiloTrigger] = useState(false);
 
   // ✅ Fixed useEffect properly
   useEffect(() => {
@@ -349,31 +350,71 @@ You are reviewing labs for ${selectedPatient.name}.`
 
 
   const handleFileUpload = async (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
 
-  console.log("📎 File selected:", file.name);
   setUploading(true);
+  const newEntries = [];
 
-  try {
-    let text = '';
+  for (const file of files) {
+    try {
+      let extractedText = '';
+      if (file.type === 'application/pdf') {
+        extractedText = await extractTextHybrid(file);
+      } else {
+        extractedText = await file.text();
+      }
 
-    if (file.type === 'application/pdf') {
-      console.log("📄 PDF upload detected. Attempting to extract...");
-      text = await extractTextHybrid(file);
-      console.log("📎 Extracted PDF Text (first 500 chars):", text.slice(0, 500));
-    } else {
-      text = await file.text();
-      console.log("✅ Extracted TXT text:", text.slice(0, 300));
+      newEntries.push({
+        name: file.name,
+        date: file.lastModified,
+        content: extractedText.trim()
+      });
+    } catch (err) {
+      console.error("📛 Failed to extract text from file:", file.name, err);
     }
-
-    await sendMessage(text, 'lab');
-  } catch (err) {
-    console.error("🚨 Error during file handling:", err);
-    alert("Something went wrong while uploading the file.");
   }
 
+  setUploadedFiles(prev => [...prev, ...newEntries]);
+  setPendingMiloTrigger(true);
   setUploading(false);
+};
+const triggerMILOAnalysis = async () => {
+  if (!uploadedFiles.length) {
+    alert("No lab files uploaded yet.");
+    return;
+  }
+
+  setLoading(true);
+
+  try {
+    const sortedFiles = [...uploadedFiles].sort((a, b) => a.lastModified - b.lastModified);
+    const oldFiles = sortedFiles.slice(0, -1);
+    const newFile = sortedFiles[sortedFiles.length - 1];
+
+    const extractText = async (file) => {
+      if (file.type === 'application/pdf') return await extractTextHybrid(file);
+      return await file.text();
+    };
+
+    const newText = await extractText(newFile);
+    const oldTexts = await Promise.all(oldFiles.map(extractText));
+
+    const contextBlock = oldTexts.length
+      ? `REFERENCE LAB HISTORY:\n\n${oldTexts.join("\n\n---\n\n")}`
+      : '';
+
+    const combinedPrompt = contextBlock
+      ? `${contextBlock}\n\nNEW LAB REPORT:\n\n${newText}`
+      : newText;
+
+    await sendMessage(combinedPrompt, 'lab');
+  } catch (err) {
+    console.error("🧨 Error during multi-file analysis:", err);
+    alert("Something went wrong analyzing the files.");
+  }
+
+  setLoading(false);
 };
 
 
@@ -585,6 +626,12 @@ const handleSignUp = async (e) => {
           ) : (
             <>
               {renderChatMessages(labMessages)}
+              <button
+  onClick={triggerMILOAnalysis}
+  className="mt-4 bg-purple-600 text-white px-5 py-2 rounded-lg hover:bg-purple-700 shadow transition"
+>
+  Analyze Most Recent Lab Report
+</button>
               <label
                 htmlFor="fileUpload"
                 className="block w-full border-2 border-dashed border-gray-600 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 transition"
@@ -598,6 +645,23 @@ const handleSignUp = async (e) => {
                   onChange={handleFileUpload}
                 />
               </label>
+              {uploadedFiles.length > 0 && (
+  <div className="bg-gray-800 border border-gray-600 p-4 rounded-lg mt-4">
+    <h4 className="text-lg font-semibold mb-2">Uploaded Files:</h4>
+    <ul className="text-sm mb-3 list-disc ml-6">
+      {uploadedFiles.map((f, idx) => (
+        <li key={idx}>{f.name}</li>
+      ))}
+    </ul>
+    <button
+      className="bg-milo-blue hover:bg-blue-700 text-white px-4 py-2 rounded shadow-glow transition"
+      onClick={handleRunMILO}
+      disabled={!pendingMiloTrigger || loading}
+    >
+      Run MILO
+    </button>
+  </div>
+)}
               <div className="flex gap-2 mt-4">
                 <input
                   className="flex-1 bg-gray-900 border border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-milo-blue"
