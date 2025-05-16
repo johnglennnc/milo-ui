@@ -199,6 +199,40 @@ function App() {
     return labKeywords.some(k => text.toLowerCase().includes(k));
   };
 
+function validateMILOResponse(text) {
+  const issues = [];
+
+  // Check for Total Testosterone < 1000 being labeled "normal" or "within range"
+  const totalTMatch = text.match(/total testosterone.*?(\d{3,4})(\.\d+)?/i);
+  if (totalTMatch) {
+    const totalTValue = parseFloat(totalTMatch[1]);
+    const callsItNormal = /total testosterone.*?(normal|within (range|goal))/i.test(text);
+    if (totalTValue < 900 && callsItNormal) {
+      issues.push(`⚠️ Total Testosterone is ${totalTValue}, which is below Eric’s ~1000 ng/dL goal, but it's called "normal".`);
+    }
+  }
+
+  // Check for Free Testosterone > 200 and not recommending dose reduction
+  const freeTMatch = text.match(/free testosterone.*?(\d{3})(\.\d+)?/i);
+  if (freeTMatch) {
+    const freeTValue = parseFloat(freeTMatch[1]);
+    const noReduction = !/dose reduction|reduce|lower.*free testosterone/i.test(text);
+    if (freeTValue > 200 && noReduction) {
+      issues.push(`⚠️ Free Testosterone is ${freeTValue}, above Eric’s 150–200 pg/mL goal, but no dose reduction is mentioned.`);
+    }
+  }
+
+  // Optional: Flag if "normal range" is used at all
+  if (text.toLowerCase().includes("normal range")) {
+    issues.push("⚠️ Phrase 'normal range' detected — responses should only reference Eric’s optimization goals.");
+  }
+
+  // Show alert and console warning if issues exist
+  if (issues.length) {
+    console.warn("🚨 MILO Response Validation Issues:", issues);
+    alert("⚠️ MILO response may need review:\n\n" + issues.join("\n"));
+  }
+}
 
   const sendMessage = async (textToSend, fromTab = 'ask') => {
   if (!textToSend?.trim()) return;
@@ -207,6 +241,16 @@ function App() {
   const userMessage = { sender: 'user', text: textToSend.trim() };
   const setMessagesForTab = isAskTab ? setAskMessages : setLabMessages;
   const getMessagesForTab = isAskTab ? askMessages : labMessages;
+  const aiMessage = {
+  sender: 'milo',
+  text: data.message.trim()
+};
+
+// 🔍 Run validation
+validateMILOResponse(aiMessage.text);
+
+setMessagesForTab(prev => [...prev, aiMessage]);
+
 
   setMessagesForTab(prev => [...prev, userMessage]);
   isAskTab ? setInput('') : setLabInput('');
@@ -217,7 +261,7 @@ function App() {
   const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
   const systemPrompt = selectedPatient
-    ? `You are MILO, a clinical assistant specializing in hormone optimization according to the clinical guidelines of Eric Kephart. Your job is to interpret lab reports and recommend treatment based on strict optimization targets.
+  ? `You are MILO, a clinical assistant specializing in hormone optimization according to the clinical guidelines of Eric Kephart. Your job is to interpret lab reports and recommend treatment based on strict optimization targets.
 
 Optimization Targets:
 
@@ -240,7 +284,8 @@ Optimization Targets:
     - Free Testosterone Goal: 5–10 pg/mL
   - Males:
     - Total Testosterone Goal: ~1000 ng/dL
-    - Free Testosterone Goal: High-normal preferred
+    - Free Testosterone Goal: 150–200 pg/mL
+    - If Free Testosterone is significantly above 200 pg/mL, recommend reassessment and possible dose reduction.
 
 - DHEA-S:
   - Females: 150–200 ug/dL
@@ -266,17 +311,23 @@ Standard Default Clinical Plans:
 - High PSA: Hold testosterone therapy and monitor closely.
 - Optimal labs: Continue current therapy without change.
 
-Guidance:
+Formatting & Guidance:
 
 - Only comment on these markers: Free T3, Free T4, TSH, Estradiol, Progesterone, Total Testosterone, Free Testosterone, DHEA-S, Vitamin D, PSA, IGF-1.
 - Ignore unrelated markers.
-- For each hormone: first give **Interpretation**, then **Clinical Plan** clearly.
-- Bold each system header (**Thyroid**, **Testosterone**, etc.).
+- For each hormone, provide exactly:
+  - A **bolded section header** (e.g. **Testosterone**)
+  - A subheading **Interpretation:** with a brief summary of lab values vs. goals
+  - A subheading **Clinical Plan:** with next-step recommendations
 - Insert one blank line between systems for clarity.
-- Never fabricate missing labs.
+- Do **not** use lab reference ranges when determining if a value is optimal — only use Eric Kephart’s targets.
+- Do **not** describe a value as "normal" if it falls below Eric's goal (e.g., Total Testosterone of 632 is low, not normal).
+- For Free Testosterone in males, always compare against the goal of 150–200 pg/mL. If it's over 200 pg/mL, recommend a dose reduction or reassessment.
+- If a lab value is missing, state it is missing and do not speculate.
+- Do not fabricate lab results or recommendations. Follow the structure strictly.
 
 You are reviewing labs for ${selectedPatient.name}.`
-    : `Today is ${today}. You are MILO, a clinical assistant. Interpret hormone labs using strict optimization targets. No specific patient selected.`;
+  : `Today is ${today}. You are MILO, a clinical assistant. Interpret hormone labs using strict optimization targets. No specific patient selected.`;
 
   try {
     const payload = {
