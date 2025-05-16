@@ -421,6 +421,65 @@ const triggerMILOAnalysis = async () => {
 
   const docRef = await addDoc(collection(db, 'patients'), {
     name: newPatientName.trim(),
+    dob: newPatientDOB.trim(),
+    labs: [],
+    teamId: userInfo.teamId
+  });
+
+  const newPatient = {
+    id: docRef.id,
+    name: newPatientName.trim(),
+    dob: newPatientDOB.trim(),
+    labs: [],
+    teamId: userInfo.teamId
+  };
+
+  setSelectedPatient(newPatient);
+  setAskMessages([]);
+  setLabMessages([]);
+};
+
+// ✅ PLACE triggerMILOAnalysis here, **outside** the above function
+const triggerMILOAnalysis = async () => {
+  if (!multiFiles.length || !selectedPatient) {
+    alert("Please upload at least one lab file and select a patient.");
+    return;
+  }
+
+  try {
+    setLoading(true);
+    const texts = [];
+
+    for (const file of multiFiles) {
+      const extractedText = file.type === 'application/pdf'
+        ? await extractTextHybrid(file)
+        : await file.text();
+      texts.push(extractedText);
+    }
+
+    const sortedTexts = texts.sort((a, b) => b.length - a.length); // crude assumption: longer = newer
+    const mostRecent = sortedTexts[0];
+    const previous = sortedTexts.slice(1).join('\n\n');
+
+    const fullPrompt = `
+==== NEWEST LAB ====
+${mostRecent}
+
+==== OLDER LABS (REFERENCE ONLY) ====
+${previous}
+`;
+
+    await sendMessage(fullPrompt, 'lab');
+  } catch (err) {
+    console.error("🧨 Error during multi-file analysis:", err);
+    alert("Something went wrong analyzing the files.");
+  }
+
+  setLoading(false);
+};
+
+  const docRef = await addDoc(collection(db, 'patients'), {
+    name: newPatientName.trim(),
     dob: newPatientDOB.trim(),   // <-- Add DOB here
     labs: [],
     teamId: userInfo.teamId
@@ -630,19 +689,59 @@ const handleSignUp = async (e) => {
 >
   Analyze Most Recent Lab Report
 </button>
-              <label
-                htmlFor="fileUpload"
-                className="block w-full border-2 border-dashed border-gray-600 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 transition"
-              >
-                {uploading ? "Uploading..." : "Drag and drop a lab report (.txt or .pdf), or click to browse"}
-                <input
-                  id="fileUpload"
-                  type="file"
-                  accept=".txt,.pdf"
-                  className="hidden"
-                  onChange={handleFileUpload}
-                />
-              </label>
+              <div
+  onDragOver={(e) => e.preventDefault()}
+  onDrop={(e) => {
+    e.preventDefault();
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    setMultiFiles(prev => [...prev, ...droppedFiles]);
+  }}
+  className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 transition bg-gray-800"
+  onClick={() => document.getElementById('multiFileUpload').click()}
+>
+  <p className="text-gray-300">📎 Drag & drop files here, or click to select</p>
+  <input
+    id="multiFileUpload"
+    type="file"
+    accept=".txt,.pdf"
+    multiple
+    className="hidden"
+    onChange={(e) => {
+      const selectedFiles = Array.from(e.target.files);
+      setMultiFiles(prev => [...prev, ...selectedFiles]);
+    }}
+  />
+</div>
+
+{/* File List Preview */}
+{multiFiles.length > 0 && (
+  <div className="mt-4 text-sm text-gray-200 space-y-1">
+    {multiFiles.map((file, index) => (
+      <div key={index} className="flex justify-between items-center bg-gray-700 p-2 rounded">
+        <span>{file.name}</span>
+        <button
+          className="text-red-400 hover:text-red-600 text-xs"
+          onClick={() => {
+            setMultiFiles(prev => prev.filter((_, i) => i !== index));
+          }}
+        >
+          Remove
+        </button>
+      </div>
+    ))}
+  </div>
+)}
+
+{/* Run MILO Button */}
+<button
+  onClick={handleRunMILO}
+  disabled={multiFiles.length === 0 || loading}
+  className={`mt-6 w-full px-4 py-2 rounded bg-milo-blue text-white font-medium hover:bg-blue-700 transition ${
+    (multiFiles.length === 0 || loading) && 'opacity-50 cursor-not-allowed'
+  }`}
+>
+  {loading ? 'Analyzing files...' : '🧠 Run MILO on Uploaded Files'}
+</button>
               {uploadedFiles.length > 0 && (
   <div className="bg-gray-800 border border-gray-600 p-4 rounded-lg mt-4">
     <h4 className="text-lg font-semibold mb-2">Uploaded Files:</h4>
