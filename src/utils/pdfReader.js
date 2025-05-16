@@ -1,9 +1,8 @@
 // src/utils/pdfReader.js
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
-import PDFWorker from '../pdf-worker';  // 👈 path to the worker we created
+import pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.entry';
 
-pdfjsLib.GlobalWorkerOptions.workerPort = new PDFWorker();
-
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 export async function extractTextFromPDF(file) {
   try {
