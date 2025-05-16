@@ -388,17 +388,14 @@ const triggerMILOAnalysis = async () => {
   setLoading(true);
 
   try {
-    const sortedFiles = [...uploadedFiles].sort((a, b) => a.lastModified - b.lastModified);
+    // Sort by date (older first)
+    const sortedFiles = [...uploadedFiles].sort((a, b) => a.date - b.date);
     const oldFiles = sortedFiles.slice(0, -1);
     const newFile = sortedFiles[sortedFiles.length - 1];
 
-    const extractText = async (file) => {
-      if (file.type === 'application/pdf') return await extractTextHybrid(file);
-      return await file.text();
-    };
-
-    const newText = await extractText(newFile);
-    const oldTexts = await Promise.all(oldFiles.map(extractText));
+    // ✅ Use .content directly, not file.text()
+    const newText = newFile.content;
+    const oldTexts = oldFiles.map(f => f.content);
 
     const contextBlock = oldTexts.length
       ? `REFERENCE LAB HISTORY:\n\n${oldTexts.join("\n\n---\n\n")}`
