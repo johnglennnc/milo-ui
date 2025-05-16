@@ -3,6 +3,7 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import html2pdf from 'html2pdf.js';
 import { auth } from './firebase';
+import { generateLabPDF } from './utils/pdfGenerator';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from './firebase';
 import {
@@ -422,15 +423,20 @@ const renderChatMessages = (msgList) => (
         >
           <ReactMarkdown>{msg.text}</ReactMarkdown>
 
-          {/* ✅ NEW: Only show "Download PDF" button next to MILO responses */}
+          {/* ✅ Show Download PDF only for MILO responses */}
           {msg.sender === 'milo' && (
             <div className="mt-2 text-right">
               <button
-  className="text-xs text-blue-400 hover:text-blue-600 underline"
-  onClick={() => downloadAsPDF(msg.text, selectedPatient, selectedPatient?.labs?.slice(-1)[0] || null)}
->
-  Download PDF
-</button>
+                className="text-xs text-blue-400 hover:text-blue-600 underline"
+                onClick={() =>
+                  generateLabPDF({
+                    patient: selectedPatient,
+                    aiResponse: msg.text
+                  })
+                }
+              >
+                Download PDF
+              </button>
             </div>
           )}
         </div>
