@@ -20,7 +20,13 @@ import {
   where
 } from 'firebase/firestore';
 import { extractTextHybrid } from './utils/hybridReader';
-
+function cleanLabText(raw) {
+  return raw
+    .replace(/[^\x20-\x7E\n\r\t:.,;()\-+%°]/g, '') // Strip binary/gibberish
+    .replace(/\n{3,}/g, '\n\n')                    // Collapse excessive line breaks
+    .replace(/\s{4,}/g, '  ')                      // Normalize wide spacing
+    .slice(0, 12000);                              // Cap at ~9k tokens
+}
 
 // ✅ Function to extract lab values
 function extractLabValues(text) {
@@ -403,11 +409,15 @@ const triggerMILOAnalysis = async () => {
       : '';
 
     const combinedPrompt = contextBlock
-      ? `${contextBlock}\n\nNEW LAB REPORT:\n\n${newText}`
-      : newText;
+  ? `${contextBlock}\n\nNEW LAB REPORT:\n\n${newText}`
+  : newText;
 
-    console.log("📦 Final MILO prompt:", combinedPrompt);
-      await sendMessage(combinedPrompt, 'lab');
+const cleaned = cleanLabText(combinedPrompt);
+
+console.log("🧼 Cleaned MILO input preview:", cleaned.slice(0, 500));
+console.log("📏 Cleaned input length:", cleaned.length);
+
+await sendMessage(cleaned, 'lab');
   } catch (err) {
     console.error("🧨 Error during multi-file analysis:", err);
     alert("Something went wrong analyzing the files.");
@@ -426,16 +436,30 @@ const handleRunMILO = async () => {
     const newest = files[files.length - 1];
 
     const newText = newest.content || (await newest.text?.()) || '';
-    const contextBlock = oldTexts.length ? `REFERENCE LAB HISTORY:\n\n${oldTexts.join("\n\n---\n\n")}` : '';
+    const contextBlock = oldTexts.length
+      ? `REFERENCE LAB HISTORY:\n\n${oldTexts.join("\n\n---\n\n")}`
+      : '';
 
-    const combined = contextBlock ? `${contextBlock}\n\nNEW LAB REPORT:\n\n${newText}` : newText;
-    await sendMessage(combined, 'lab');
+    const combined = contextBlock
+      ? `${contextBlock}\n\nNEW LAB REPORT:\n\n${newText}`
+      : newText;
+
+    // 🧼 Clean the input before sending to OpenAI
+    const cleaned = cleanLabText(combined);
+
+    // 🔍 Debug info
+    console.log("🧼 Cleaned MILO input preview:", cleaned.slice(0, 500));
+    console.log("📏 Cleaned total length:", cleaned.length);
+
+    await sendMessage(cleaned, 'lab');
   } catch (err) {
     console.error('🚨 handleRunMILO failed:', err);
     alert('Something went wrong running MILO.');
   }
+
   setLoading(false);
 };
+
 
   const handleNewPatient = async () => {
   if (!newPatientName.trim() || !userInfo?.teamId) return;
@@ -701,7 +725,7 @@ const handleSignUp = async (e) => {
     (multiFiles.length === 0 || loading) && 'opacity-50 cursor-not-allowed'
   }`}
 >
-  {loading ? 'Analyzing files...' : '🧠 Run MILO on Uploaded Files'}
+  {loading ? 'Analyzing files...' : 'Run Uploaded Files'}
 </button>
               {uploadedFiles.length > 0 && (
   <div className="bg-gray-800 border border-gray-600 p-4 rounded-lg mt-4">
