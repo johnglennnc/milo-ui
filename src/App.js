@@ -46,7 +46,6 @@ const downloadAsPDF = (text, patient = null, labEntry = null) => {
     if (isNaN(date)) return 'N/A';
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
-    const [multiFiles, setMultiFiles] = useState([]);
     const year = date.getFullYear();
     return `${month}/${day}/${year}`;
   };
@@ -109,6 +108,7 @@ function App() {
   const [newPatientDOB, setNewPatientDOB] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [input, setInput] = useState('');
+  const [multiFiles, setMultiFiles] = useState([]);
   const [labInput, setLabInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
