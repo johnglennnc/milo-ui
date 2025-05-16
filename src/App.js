@@ -676,26 +676,60 @@ const handleSignUp = async (e) => {
 </button>
               <div
   onDragOver={(e) => e.preventDefault()}
-  onDrop={(e) => {
-    e.preventDefault();
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    setMultiFiles(prev => [...prev, ...droppedFiles]);
-  }}
+  onDrop={async (e) => {
+  e.preventDefault();
+  const droppedFiles = Array.from(e.dataTransfer.files || []);
+
+  const processed = await Promise.all(
+    droppedFiles.map(async (file) => {
+      let extractedText = '';
+      if (file.type === 'application/pdf') {
+        extractedText = await extractTextHybrid(file);
+      } else {
+        extractedText = await file.text();
+      }
+
+      return {
+        name: file.name,
+        date: file.lastModified,
+        content: extractedText.trim()
+      };
+    })
+  );
+
+  setMultiFiles(prev => [...prev, ...processed]);
+}}
   className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 transition bg-gray-800"
   onClick={() => document.getElementById('multiFileUpload').click()}
 >
   <p className="text-gray-300">📎 Drag & drop files here, or click to select</p>
   <input
-    id="multiFileUpload"
-    type="file"
-    accept=".txt,.pdf"
-    multiple
-    className="hidden"
-    onChange={(e) => {
-      const selectedFiles = Array.from(e.target.files);
-      setMultiFiles(prev => [...prev, ...selectedFiles]);
-    }}
-  />
+  id="multiFileUpload"
+  type="file"
+  accept=".txt,.pdf"
+  multiple
+  className="hidden"
+  onChange={async (e) => {
+    const selectedFiles = Array.from(e.target.files || []);
+    const processed = await Promise.all(
+      selectedFiles.map(async (file) => {
+        let extractedText = '';
+        if (file.type === 'application/pdf') {
+          extractedText = await extractTextHybrid(file);
+        } else {
+          extractedText = await file.text();
+        }
+
+        return {
+          name: file.name,
+          date: file.lastModified,
+          content: extractedText.trim()
+        };
+      })
+    );
+    setMultiFiles(prev => [...prev, ...processed]);
+  }}
+/>
 </div>
 
 {/* File List Preview */}
