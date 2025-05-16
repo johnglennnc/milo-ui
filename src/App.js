@@ -46,6 +46,7 @@ const downloadAsPDF = (text, patient = null, labEntry = null) => {
     if (isNaN(date)) return 'N/A';
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
+    const [multiFiles, setMultiFiles] = useState([]);
     const year = date.getFullYear();
     return `${month}/${day}/${year}`;
   };
@@ -415,6 +416,26 @@ const triggerMILOAnalysis = async () => {
   setLoading(false);
 };
 
+const handleRunMILO = async () => {
+  if (!multiFiles.length) return;
+
+  setLoading(true);
+  try {
+    const files = [...multiFiles].sort((a, b) => a.lastModified - b.lastModified);
+    const oldTexts = files.slice(0, -1).map(f => f.content || '');
+    const newest = files[files.length - 1];
+
+    const newText = newest.content || (await newest.text?.()) || '';
+    const contextBlock = oldTexts.length ? `REFERENCE LAB HISTORY:\n\n${oldTexts.join("\n\n---\n\n")}` : '';
+
+    const combined = contextBlock ? `${contextBlock}\n\nNEW LAB REPORT:\n\n${newText}` : newText;
+    await sendMessage(combined, 'lab');
+  } catch (err) {
+    console.error('🚨 handleRunMILO failed:', err);
+    alert('Something went wrong running MILO.');
+  }
+  setLoading(false);
+};
 
   const handleNewPatient = async () => {
   if (!newPatientName.trim() || !userInfo?.teamId) return;
@@ -438,66 +459,6 @@ const triggerMILOAnalysis = async () => {
   setAskMessages([]);
   setLabMessages([]);
 };
-
-// ✅ PLACE triggerMILOAnalysis here, **outside** the above function
-const triggerMILOAnalysis = async () => {
-  if (!multiFiles.length || !selectedPatient) {
-    alert("Please upload at least one lab file and select a patient.");
-    return;
-  }
-
-  try {
-    setLoading(true);
-    const texts = [];
-
-    for (const file of multiFiles) {
-      const extractedText = file.type === 'application/pdf'
-        ? await extractTextHybrid(file)
-        : await file.text();
-      texts.push(extractedText);
-    }
-
-    const sortedTexts = texts.sort((a, b) => b.length - a.length); // crude assumption: longer = newer
-    const mostRecent = sortedTexts[0];
-    const previous = sortedTexts.slice(1).join('\n\n');
-
-    const fullPrompt = `
-==== NEWEST LAB ====
-${mostRecent}
-
-==== OLDER LABS (REFERENCE ONLY) ====
-${previous}
-`;
-
-    await sendMessage(fullPrompt, 'lab');
-  } catch (err) {
-    console.error("🧨 Error during multi-file analysis:", err);
-    alert("Something went wrong analyzing the files.");
-  }
-
-  setLoading(false);
-};
-
-  const docRef = await addDoc(collection(db, 'patients'), {
-    name: newPatientName.trim(),
-    dob: newPatientDOB.trim(),   // <-- Add DOB here
-    labs: [],
-    teamId: userInfo.teamId
-  });
-
-  const newPatient = {
-    id: docRef.id,
-    name: newPatientName.trim(),
-    dob: newPatientDOB.trim(),  // <-- Add DOB here
-    labs: [],
-    teamId: userInfo.teamId
-  };
-
-  setSelectedPatient(newPatient);
-  setAskMessages([]);
-  setLabMessages([]);
-};
-
 
 const renderChatMessages = (msgList) => (
   <div className="bg-milo-dark border border-gray-700 rounded-xl h-[60vh] overflow-y-auto p-4 mb-4 shadow-inner text-white">
