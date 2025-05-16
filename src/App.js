@@ -654,12 +654,11 @@ const handleSignUp = async (e) => {
       ))}
     </ul>
     <button
-      className="bg-milo-blue hover:bg-blue-700 text-white px-4 py-2 rounded shadow-glow transition"
-      onClick={handleRunMILO}
-      disabled={!pendingMiloTrigger || loading}
-    >
-      Run MILO
-    </button>
+  onClick={triggerMILOAnalysis}
+  className="mt-4 bg-purple-600 text-white px-5 py-2 rounded-lg hover:bg-purple-700 shadow transition"
+>
+  Analyze Most Recent Lab Report
+</button>
   </div>
 )}
               <div className="flex gap-2 mt-4">
