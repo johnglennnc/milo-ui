@@ -363,6 +363,7 @@ You are reviewing labs for ${selectedPatient.name}.`
         console.log("📄 PDF upload detected. Attempting to extract...");
         try {
           text = await extractTextFromPDF(file);
+                  console.log("📎 Extracted PDF Text (first 500 chars):", text.slice(0, 500));
           console.log("✅ Extracted PDF text:", text.slice(0, 300)); // limit output
         } catch (err) {
           console.error("❌ PDF extraction failed:", err);
