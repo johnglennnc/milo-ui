@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import html2pdf from 'html2pdf.js';
 import { auth } from './firebase';
 import { generateLabPDF } from './utils/pdfGenerator';
+import { extractTextFromImagePDF } from './utils/ocrReader';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from './firebase';
 import {
