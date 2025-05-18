@@ -45,6 +45,14 @@ function extractLabValues(text) {
   return labs;
 }
 
+// ✅ Check if a file probably needs OCR
+function looksLikeScannedPDF(text) {
+  const short = text.trim().length < 300;
+  const repeatedHeader = (text.match(/LAB\* for/g) || []).length > 2;
+  const lacksLabs = !/(TSH|Testosterone|Free T3|Vitamin D|Estradiol|DHEA|IGF|PSA)/i.test(text);
+  return short || repeatedHeader || lacksLabs;
+}
+
 // ✅ Function to download text as PDF
 const downloadAsPDF = (text, patient = null, labEntry = null) => {
   const formatDate = (isoString) => {
@@ -460,6 +468,25 @@ const handleRunMILO = async () => {
   setLoading(false);
 };
 
+const handleOCRReprocess = async (index) => {
+  try {
+    const file = uploadedFiles[index];
+    const ocrText = await extractTextFromImagePDF(file);
+    const updatedFile = {
+      ...file,
+      content: ocrText.trim()
+    };
+
+    const newFiles = [...uploadedFiles];
+    newFiles[index] = updatedFile;
+    setUploadedFiles(newFiles);
+
+    alert('✅ OCR completed. You can now re-run MILO.');
+  } catch (err) {
+    console.error("OCR failed:", err);
+    alert('❌ Failed to reprocess with OCR.');
+  }
+};
 
   const handleNewPatient = async () => {
   if (!newPatientName.trim() || !userInfo?.teamId) return;
@@ -766,7 +793,18 @@ const handleSignUp = async (e) => {
     <h4 className="text-lg font-semibold mb-2">Uploaded Files:</h4>
     <ul className="text-sm mb-3 list-disc ml-6">
       {uploadedFiles.map((f, idx) => (
-        <li key={idx}>{f.name}</li>
+        <li key={idx}>
+  {f.name}
+  {looksLikeScannedPDF(f.content) && (
+    <button
+      onClick={() => handleOCRReprocess(idx)}
+      className="ml-2 text-sm text-yellow-400 hover:text-yellow-200 underline"
+    >
+      Reprocess with OCR
+    </button>
+  )}
+</li>
+
       ))}
     </ul>
     <button
