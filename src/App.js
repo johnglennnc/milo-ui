@@ -472,20 +472,27 @@ const handleRunMILO = async () => {
 const handleOCRReprocess = async (index) => {
   try {
     const file = uploadedFiles[index];
+
+    console.log("📄 Starting OCR reprocess for:", file.name);
+
     const ocrText = await extractTextFromImagePDF(file);
+
+    console.log("📄 OCR result preview:", ocrText.slice(0, 300));
+
     const updatedFile = {
       ...file,
       content: ocrText.trim()
     };
 
-    const newFiles = [...uploadedFiles];
-    newFiles[index] = updatedFile;
-    setUploadedFiles(newFiles);
+    const updatedFiles = [...uploadedFiles];
+    updatedFiles[index] = updatedFile;
 
-    alert('✅ OCR completed. You can now re-run MILO.');
+    setUploadedFiles(updatedFiles);
+
+    alert('✅ OCR completed. You can now re-run MILO on this file.');
   } catch (err) {
-    console.error("OCR failed:", err);
-    alert('❌ Failed to reprocess with OCR.');
+    console.error("❌ OCR failed:", err);
+    alert('❌ OCR reprocess failed. See console for details.');
   }
 };
 
@@ -796,7 +803,7 @@ const handleSignUp = async (e) => {
       {uploadedFiles.map((f, idx) => (
         <li key={idx}>
   {f.name}
-  {looksLikeScannedPDF(f.content) && (
+  {f.content && looksLikeScannedPDF(f.content) && (
     <button
       onClick={() => handleOCRReprocess(idx)}
       className="ml-2 text-sm text-yellow-400 hover:text-yellow-200 underline"
