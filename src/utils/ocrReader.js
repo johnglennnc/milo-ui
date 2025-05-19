@@ -8,29 +8,33 @@ export async function extractTextFromImagePDF(file) {
   try {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    const page = await pdf.getPage(1);
 
-    const viewport = page.getViewport({ scale: 2 });
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d');
+    let fullText = '';
 
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const viewport = page.getViewport({ scale: 2 });
 
-    await page.render({ canvasContext: context, viewport }).promise;
-    const imageDataURL = canvas.toDataURL();
+      const canvas = document.createElement('canvas');
+      const context = canvas.getContext('2d');
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
 
-    const result = await Tesseract.recognize(imageDataURL, 'eng', {
-      logger: m => console.log(`🧠 OCR Progress: ${m.status} (${Math.round(m.progress * 100)}%)`)
-    });
+      await page.render({ canvasContext: context, viewport }).promise;
+      const imageDataURL = canvas.toDataURL();
 
-    const text = result.data.text;
+      const result = await Tesseract.recognize(imageDataURL, 'eng', {
+        logger: m =>
+          console.log(`🧠 OCR Page ${i} Progress: ${m.status} (${Math.round(m.progress * 100)}%)`)
+      });
 
-    // ✅ Add full debug output here
-    console.log("🔍 OCR Extracted Text (preview):", text.slice(0, 1000));
-    console.log("🧾 Full OCR Output:", text); // 👈 full raw text for inspection
+      const pageText = result.data.text;
+      console.log(`📄 OCR Page ${i} Extracted:`, pageText.slice(0, 300));
+      fullText += `\n\n--- Page ${i} ---\n\n${pageText}`;
+    }
 
-    return text;
+    console.log("🧾 Final OCR Combined Text:", fullText.slice(0, 2000));
+    return fullText;
   } catch (err) {
     console.error('❌ OCR Extraction Failed:', err);
     return '';
