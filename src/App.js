@@ -800,21 +800,26 @@ const handleSignUp = async (e) => {
   <div className="bg-gray-800 border border-gray-600 p-4 rounded-lg mt-4">
     <h4 className="text-lg font-semibold mb-2">Uploaded Files:</h4>
     <ul className="text-sm mb-3 list-disc ml-6">
-      {uploadedFiles.map((f, idx) => (
-        <li key={idx}>
-  {f.name}
-  {f.content && looksLikeScannedPDF(f.content) && (
-    <button
-      onClick={() => handleOCRReprocess(idx)}
-      className="ml-2 text-sm text-yellow-400 hover:text-yellow-200 underline"
-    >
-      Reprocess with OCR
-    </button>
-  )}
-</li>
+  {uploadedFiles.map((f, idx) => (
+    <li key={idx} className="mb-2">
+      <span className="font-medium text-white">{f.name}</span>
+      <br />
+      <small className="text-xs text-gray-400">
+        Preview: {f.content?.slice(0, 60) || "No content"}
+      </small>
+      <br />
+      {f.content && looksLikeScannedPDF(f.content) && (
+        <button
+          onClick={() => handleOCRReprocess(idx)}
+          className="mt-1 text-sm text-yellow-400 hover:text-yellow-200 underline"
+        >
+          Reprocess with OCR
+        </button>
+      )}
+    </li>
+  ))}
+</ul>
 
-      ))}
-    </ul>
     <button
   onClick={triggerMILOAnalysis}
   className="mt-4 bg-purple-600 text-white px-5 py-2 rounded-lg hover:bg-purple-700 shadow transition"
