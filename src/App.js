@@ -390,7 +390,7 @@ You are reviewing labs for ${selectedPatient.name}.`
       console.error("📛 Failed to extract text from file:", file.name, err);
     }
   }
-
+console.log("📂 Upload entry preview:", newEntries);
   setUploadedFiles(prev => [...prev, ...newEntries]);
   setPendingMiloTrigger(true);
   setUploading(false);
@@ -800,8 +800,8 @@ const handleSignUp = async (e) => {
   <div className="bg-gray-800 border border-gray-600 p-4 rounded-lg mt-4">
     <h4 className="text-lg font-semibold mb-2">Uploaded Files:</h4>
     <ul className="text-sm mb-3 list-disc ml-6">
-  {uploadedFiles.map((f, idx) => {
-  console.log(`🧾 File ${idx}:`, f.name, f.content?.slice(0, 60));
+ {uploadedFiles.map((f, idx) => {
+  console.log(`🧾 File ${idx} preview:`, f.content);
 
   return (
     <li key={idx} className="mb-2">
