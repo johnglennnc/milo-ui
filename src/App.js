@@ -64,6 +64,33 @@ function extractLabValues(text) {
   return labs;
 }
 
+function extractMentionedHormones(text) {
+  const hormones = [
+    { name: 'Free T3', keywords: ['free t3'] },
+    { name: 'Free T4', keywords: ['free t4'] },
+    { name: 'TSH', keywords: ['tsh'] },
+    { name: 'Estradiol', keywords: ['estradiol'] },
+    { name: 'Progesterone', keywords: ['progesterone'] },
+    { name: 'Total Testosterone', keywords: ['total testosterone'] },
+    { name: 'Free Testosterone', keywords: ['free testosterone'] },
+    { name: 'DHEA-S', keywords: ['dhea'] },
+    { name: 'Vitamin D', keywords: ['vitamin d'] },
+    { name: 'PSA', keywords: ['psa'] },
+    { name: 'IGF-1', keywords: ['igf-1', 'igf1'] }
+  ];
+
+  const found = new Set();
+  const lowerText = text.toLowerCase();
+
+  for (const hormone of hormones) {
+    if (hormone.keywords.some(k => lowerText.includes(k))) {
+      found.add(hormone.name);
+    }
+  }
+
+  return found;
+}
+
 // ✅ Check if a file probably needs OCR
 function looksLikeScannedPDF(text) {
   const short = text.trim().length < 300;
@@ -240,74 +267,57 @@ function validateMILOResponse(text) {
     year: 'numeric'
   });
 
-  const systemPrompt = selectedPatient
-    ? `You are MILO, a clinical assistant specializing in hormone optimization according to the clinical guidelines of Eric Kephart. Your job is to interpret lab reports and recommend treatment based on strict optimization targets.
+ const mentioned = extractMentionedHormones(textToSend);
+const hormoneHeader = (h) => mentioned.has(h) ? `
+- **${h}**: Include if present.` : '';
 
-Optimization Targets:
+const systemPrompt = selectedPatient
+  ? `You are MILO, a clinical assistant specializing in hormone optimization per Eric Kephart’s clinical targets.
 
-- Thyroid:
-  - Free T3: Goal > 4.0 pg/mL
-  - Free T4: Target ~1.0 ng/dL
-  - TSH: Should decrease toward 1.0–2.0 uIU/mL when Free T3 is optimized
+Only discuss markers found in the lab report. If a hormone is not mentioned in the lab, do not reference it.
 
-- Estradiol (Postmenopausal Female):
-  - Goal: 75 pg/mL
-  - Start estradiol replacement if <5 pg/mL with FSH >50
+Optimization Targets:${hormoneHeader('Free T3')}
+- Goal > 4.0 pg/mL
 
-- Progesterone (Postmenopausal Female):
-  - Goal: 1–5 ng/mL
-  - Symptom improvement (especially sleep) is primary indicator
+${hormoneHeader('Free T4')}
+- Target ~1.0 ng/dL
 
-- Testosterone:
-  - Females:
-    - Total Testosterone Goal: 100–200 ng/dL
-    - Free Testosterone Goal: 5–10 pg/mL
-  - Males:
-    - Total Testosterone Goal: ~1000 ng/dL
-    - Free Testosterone Goal: 150–200 pg/mL
-    - If Free Testosterone is significantly above 200 pg/mL, recommend reassessment and possible dose reduction.
+${hormoneHeader('TSH')}
+- Should decrease toward 1.0–2.0 uIU/mL when Free T3 is optimized
 
-- DHEA-S:
-  - Females: 150–200 ug/dL
-  - Males: 200–300 ug/dL
+${hormoneHeader('Estradiol')}
+- Goal: 75 pg/mL (Postmenopausal)
 
-- Vitamin D (25-hydroxy):
-  - Goal: 60–80 ng/mL
+${hormoneHeader('Progesterone')}
+- Goal: 1–5 ng/mL (Postmenopausal)
 
-- IGF-1:
-  - Goal: >200 ng/mL
-  - Consider peptide therapy if persistently low after hormone optimization
+${hormoneHeader('Total Testosterone')}
+- Males: Goal ~1000 ng/dL
+- Females: Goal 100–200 ng/dL
 
-- PSA (Males only):
-  - Must be <4.0 ng/mL before starting or continuing testosterone therapy
+${hormoneHeader('Free Testosterone')}
+- Males: Goal 150–200 pg/mL
+- Females: Goal 5–10 pg/mL
 
-Standard Default Clinical Plans:
+${hormoneHeader('DHEA-S')}
+- Males: 200–300 ug/dL
+- Females: 150–200 ug/dL
 
-- Low Free T3: Start liothyronine (T3) 5 mcg twice daily.
-- Low Total Testosterone (Males): Start testosterone cream 200 mg daily.
-- Low Vitamin D: Start Vitamin D3 5000 IU daily.
-- Low DHEA-S: Start DHEA supplement 25–50 mg daily.
-- Low IGF-1: Recommend CJC-1295/Ipamorelin peptide therapy.
-- High PSA: Hold testosterone therapy and monitor closely.
-- Optimal labs: Continue current therapy without change.
+${hormoneHeader('Vitamin D')}
+- Goal: 60–80 ng/mL
 
-Formatting & Guidance:
+${hormoneHeader('IGF-1')}
+- Goal: >200 ng/mL
 
-- Only comment on these markers: Free T3, Free T4, TSH, Estradiol, Progesterone, Total Testosterone, Free Testosterone, DHEA-S, Vitamin D, PSA, IGF-1.
-- Ignore unrelated markers.
-- For each hormone, provide exactly:
-  - A **bolded section header** (e.g. **Testosterone**)
-  - A subheading **Interpretation:** with a brief summary of lab values vs. goals
-  - A subheading **Clinical Plan:** with next-step recommendations
-- Insert one blank line between systems for clarity.
-- Do **not** use lab reference ranges when determining if a value is optimal — only use Eric Kephart’s targets.
-- Do **not** describe a value as "normal" if it falls below Eric's goal (e.g., Total Testosterone of 632 is low, not normal).
-- For Free Testosterone in males, always compare against the goal of 150–200 pg/mL. If it's over 200 pg/mL, recommend a dose reduction or reassessment.
-- If a lab value is not present in the report, do not mention that hormone at all.
-- Do not fabricate lab results or recommendations. Follow the structure strictly.
+${hormoneHeader('PSA')}
+- Must be <4.0 ng/mL for males
 
-You are reviewing labs for ${selectedPatient.name}.`
-    : `Today is ${today}. You are MILO, a clinical assistant. Interpret hormone labs using strict optimization targets. No specific patient selected.`;
+Only analyze the following markers if they are explicitly present: Free T3, Free T4, TSH, Estradiol, Progesterone, Total Testosterone, Free Testosterone, DHEA-S, Vitamin D, PSA, IGF-1.
+
+You are analyzing labs for ${selectedPatient.name}. Use short, clinical summaries. Do not invent missing markers.`
+  : `Today is ${today}. You are MILO, a clinical assistant. Interpret hormone labs using strict optimization targets. Do not include any marker not explicitly listed in the lab report.`;
+
+
 
   try {
     const payload = {
