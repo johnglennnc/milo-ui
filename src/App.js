@@ -800,7 +800,10 @@ const handleSignUp = async (e) => {
   <div className="bg-gray-800 border border-gray-600 p-4 rounded-lg mt-4">
     <h4 className="text-lg font-semibold mb-2">Uploaded Files:</h4>
     <ul className="text-sm mb-3 list-disc ml-6">
-  {uploadedFiles.map((f, idx) => (
+  {uploadedFiles.map((f, idx) => {
+  console.log(`🧾 File ${idx}:`, f.name, f.content?.slice(0, 60));
+
+  return (
     <li key={idx} className="mb-2">
       <span className="font-medium text-white">{f.name}</span>
       <br />
@@ -817,7 +820,8 @@ const handleSignUp = async (e) => {
         </button>
       )}
     </li>
-  ))}
+  );
+})}
 </ul>
 
     <button
