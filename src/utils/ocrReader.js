@@ -25,7 +25,11 @@ export async function extractTextFromImagePDF(file) {
     });
 
     const text = result.data.text;
-    console.log("🔍 OCR Extracted Text:", text.slice(0, 1000));
+
+    // ✅ Add full debug output here
+    console.log("🔍 OCR Extracted Text (preview):", text.slice(0, 1000));
+    console.log("🧾 Full OCR Output:", text); // 👈 full raw text for inspection
+
     return text;
   } catch (err) {
     console.error('❌ OCR Extraction Failed:', err);
