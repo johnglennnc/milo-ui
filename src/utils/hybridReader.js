@@ -6,15 +6,19 @@ export async function extractTextHybrid(file) {
 
   const pdfText = await extractTextFromPDF(file);
 
-  // If the extracted text is super short OR just hospital boilerplate, switch to OCR
-  const isRepeatingHeader = (pdfText.match(/LAB\* for/g) || []).length > 2;
   const tooShort = pdfText.trim().length < 100;
 
-  if (!isRepeatingHeader && !tooShort) {
+  // New logic: detects repeating "LAB* for" headers or empty lab data
+  const repeatingHeader = (pdfText.match(/LAB\*.*for/gi) || []).length > 2;
+  const lacksLabMarkers = !/(TSH|Testosterone|Free T3|Estradiol|Progesterone|DHEA|IGF|PSA|Vitamin D)/i.test(pdfText);
+
+  const shouldFallbackToOCR = tooShort || repeatingHeader || lacksLabMarkers;
+
+  if (!shouldFallbackToOCR) {
     console.log("📄 Using PDF.js extracted text.");
     return pdfText;
   } else {
-    console.warn("📄 PDF appears to be image-based or invalid — switching to OCR.");
+    console.warn("⚠️ Falling back to OCR due to low-quality PDF.js output.");
     const ocrText = await extractTextFromImagePDF(file);
     return ocrText;
   }
