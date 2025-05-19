@@ -32,17 +32,35 @@ function cleanLabText(raw) {
 // ✅ Function to extract lab values
 function extractLabValues(text) {
   const labs = {};
+  const seen = new Set();
   const lines = text.toLowerCase().split(/\n|\.|,/);
+
   lines.forEach(line => {
-    const estr = line.match(/estradiol.*?(\d+)/);
-    if (estr) labs.estradiol = parseFloat(estr[1]);
+    const checks = [
+      { key: 'estradiol', regex: /estradiol.*?(\d+(\.\d+)?)/ },
+      { key: 'progesterone', regex: /progesterone.*?(\d+(\.\d+)?)/ },
+      { key: 'dhea', regex: /dhea.*?(\d+(\.\d+)?)/ },
+      { key: 'free_t3', regex: /free[\s-]?t3.*?(\d+(\.\d+)?)/ },
+      { key: 'tsh', regex: /tsh.*?(\d+(\.\d+)?)/ },
+      { key: 'free_t4', regex: /free[\s-]?t4.*?(\d+(\.\d+)?)/ },
+      { key: 'total_testosterone', regex: /total[\s-]?testosterone.*?(\d+(\.\d+)?)/ },
+      { key: 'free_testosterone', regex: /free[\s-]?testosterone.*?(\d+(\.\d+)?)/ },
+      { key: 'psa', regex: /psa.*?(\d+(\.\d+)?)/ },
+      { key: 'vitamin_d', regex: /vitamin[\s-]?d.*?(\d+(\.\d+)?)/ },
+      { key: 'igf_1', regex: /igf[\s-]?1.*?(\d+(\.\d+)?)/ }
+    ];
 
-    const prog = line.match(/progesterone.*?(\d+(\.\d+)?)/);
-    if (prog) labs.progesterone = parseFloat(prog[1]);
-
-    const dhea = line.match(/dhea.*?(\d+)/);
-    if (dhea) labs.dhea = parseFloat(dhea[1]);
+    checks.forEach(({ key, regex }) => {
+      if (!seen.has(key)) {
+        const match = line.match(regex);
+        if (match) {
+          labs[key] = parseFloat(match[1]);
+          seen.add(key);
+        }
+      }
+    });
   });
+
   return labs;
 }
 
