@@ -64,7 +64,6 @@ function extractLabValues(text) {
 
   return labs;
 }
-const [showPreview, setShowPreview] = useState(false);
 
 function extractMentionedHormones(text) {
   const hormones = [
@@ -164,6 +163,7 @@ function App() {
   const [loginPassword, setLoginPassword] = useState('');
   const [askMessages, setAskMessages] = useState([]);
   const [labMessages, setLabMessages] = useState([]);
+  const [showPreview, setShowPreview] = useState(false);
   const [patients, setPatients] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [newPatientName, setNewPatientName] = useState('');
