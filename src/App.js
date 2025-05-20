@@ -64,6 +64,7 @@ function extractLabValues(text) {
 
   return labs;
 }
+const [showPreview, setShowPreview] = useState(false);
 
 function extractMentionedHormones(text) {
   const hormones = [
@@ -178,6 +179,7 @@ function App() {
   const [userInfo, setUserInfo] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [pendingMiloTrigger, setPendingMiloTrigger] = useState(false);
+  const [showExtractedText, setShowExtractedText] = useState(false);
 
   // ✅ Fixed useEffect properly
   useEffect(() => {
@@ -793,9 +795,22 @@ const handleSignUp = async (e) => {
     <li key={idx} className="mb-2">
       <span className="font-medium text-white">{f.name}</span>
       <br />
-      <small className="text-xs text-gray-400">
-        Preview: {f.content?.slice(0, 60) || "No content"}
-      </small>
+      <button
+  className="text-blue-400 hover:text-blue-200 text-xs underline"
+  onClick={(e) => {
+    e.preventDefault();
+    setShowExtractedText(prev => !prev);
+  }}
+>
+  {showExtractedText ? 'Hide extracted text' : 'Show extracted text'}
+</button>
+
+{showExtractedText && (
+  <pre className="text-xs text-gray-300 whitespace-pre-wrap mt-1 max-h-48 overflow-y-auto border border-gray-600 p-2 rounded">
+    {f.content || "No content available."}
+  </pre>
+)}
+
       <br />
       {f.content && looksLikeScannedPDF(f.content) && (
         <button
