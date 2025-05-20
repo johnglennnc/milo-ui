@@ -178,8 +178,8 @@ function App() {
   const [patientMode, setPatientMode] = useState('select');
   const [userInfo, setUserInfo] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [visiblePreviews, setVisiblePreviews] = useState({});
   const [pendingMiloTrigger, setPendingMiloTrigger] = useState(false);
-  const [showExtractedText, setShowExtractedText] = useState(false);
 
   // ✅ Fixed useEffect properly
   useEffect(() => {
@@ -799,13 +799,16 @@ const handleSignUp = async (e) => {
   className="text-blue-400 hover:text-blue-200 text-xs underline"
   onClick={(e) => {
     e.preventDefault();
-    setShowExtractedText(prev => !prev);
+    setVisiblePreviews(prev => ({
+      ...prev,
+      [idx]: !prev[idx]
+    }));
   }}
 >
-  {showExtractedText ? 'Hide extracted text' : 'Show extracted text'}
+  {visiblePreviews[idx] ? 'Hide extracted text' : 'Show extracted text'}
 </button>
 
-{showExtractedText && (
+{visiblePreviews[idx] && (
   <pre className="text-xs text-gray-300 whitespace-pre-wrap mt-1 max-h-48 overflow-y-auto border border-gray-600 p-2 rounded">
     {f.content || "No content available."}
   </pre>
