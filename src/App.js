@@ -792,39 +792,40 @@ const handleSignUp = async (e) => {
   console.log(`🧾 File ${idx} preview:`, f.content);
 
   return (
-    <li key={idx} className="mb-2">
-      <span className="font-medium text-white">{f.name}</span>
-      <br />
+  <li key={idx} className="mb-2">
+    <span className="font-medium text-white">{f.name}</span>
+    <br />
+    <button
+      className="text-blue-400 hover:text-blue-200 text-xs underline"
+      onClick={(e) => {
+        e.preventDefault();
+        setVisiblePreviews(prev => {
+          const updated = { ...prev, [idx]: !prev[idx] };
+          console.log("🔍 Current Preview States:", updated);
+          return updated;
+        });
+      }}
+    >
+      {visiblePreviews[idx] ? 'Hide extracted text' : 'Show extracted text'}
+    </button>
+
+    {visiblePreviews[idx] && (
+      <pre className="text-xs text-gray-300 whitespace-pre-wrap mt-1 max-h-48 overflow-y-auto border border-gray-600 p-2 rounded">
+        {f.content || "No content available."}
+      </pre>
+    )}
+
+    <br />
+    {f.content && looksLikeScannedPDF(f.content) && (
       <button
-  className="text-blue-400 hover:text-blue-200 text-xs underline"
-  onClick={(e) => {
-    e.preventDefault();
-    setVisiblePreviews(prev => ({
-      ...prev,
-      [idx]: !prev[idx]
-    }));
-  }}
->
-  {visiblePreviews[idx] ? 'Hide extracted text' : 'Show extracted text'}
-</button>
-
-{visiblePreviews[idx] && (
-  <pre className="text-xs text-gray-300 whitespace-pre-wrap mt-1 max-h-48 overflow-y-auto border border-gray-600 p-2 rounded">
-    {f.content || "No content available."}
-  </pre>
-)}
-
-      <br />
-      {f.content && looksLikeScannedPDF(f.content) && (
-        <button
-          onClick={() => handleOCRReprocess(idx)}
-          className="mt-1 text-sm text-yellow-400 hover:text-yellow-200 underline"
-        >
-          Reprocess with OCR
-        </button>
-      )}
-    </li>
-  );
+        onClick={() => handleOCRReprocess(idx)}
+        className="mt-1 text-sm text-yellow-400 hover:text-yellow-200 underline"
+      >
+        Reprocess with OCR
+      </button>
+    )}
+  </li>
+);
 })}
 </ul>
 
