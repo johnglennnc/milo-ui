@@ -1047,11 +1047,9 @@ setVisiblePreviews(prev => ({ ...prev, ...newInputPreviews }));
     </button>
   </div>
 )}
-        </>
-      )}
+
     </div>
   );
 }
-
 
 export default App;
