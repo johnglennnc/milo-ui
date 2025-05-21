@@ -983,18 +983,22 @@ setVisiblePreviews(prev => ({ ...prev, ...newInputPreviews }));
         <h4 className="text-lg font-semibold mb-2">Uploaded Lab Reports:</h4>
         {selectedPatient.labs?.length ? (
           <ul className="list-disc ml-6 space-y-1 text-sm">
-            {selectedPatient.labs.map((lab, idx) => (
-              <li key={idx}>
-                <a
-  href={lab.fileUrl}
-  target="_blank"
-  rel="noopener noreferrer"
-  className="text-blue-400 hover:underline"
->
-  📄 {lab.date}
-</a>
-              </li>
-            ))}
+            {selectedPatient.labs.map((lab, idx) => {
+  console.log("🔥 Lab file URL:", lab.fileUrl); // <= Add this
+
+  return (
+    <li key={idx}>
+      <a
+        href={lab.fileUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-400 hover:underline"
+      >
+        📄 {lab.date}
+      </a>
+    </li>
+  );
+})}
           </ul>
         ) : (
           <p className="text-sm text-gray-400">No lab uploads yet.</p>
