@@ -756,23 +756,31 @@ const handleSignUp = async (e) => {
 </div>
 
 {/* File List Preview */}
-{multiFiles.length > 0 && (
-  <div className="mt-4 text-sm text-gray-200 space-y-1">
-    {multiFiles.map((file, index) => (
-      <div key={index} className="flex justify-between items-center bg-gray-700 p-2 rounded">
-        <span>{file.name}</span>
-        <button
-          className="text-red-400 hover:text-red-600 text-xs"
-          onClick={() => {
-            setMultiFiles(prev => prev.filter((_, i) => i !== index));
-          }}
-        >
-          Remove
-        </button>
-      </div>
-    ))}
+{multiFiles.map((file, index) => (
+  <div key={index} className="bg-gray-700 p-2 rounded mb-2">
+    <div className="flex justify-between items-center">
+      <span>{file.name}</span>
+      <button
+        className="text-blue-400 hover:text-blue-200 text-xs underline"
+        onClick={(e) => {
+          e.preventDefault();
+          setVisiblePreviews(prev => ({
+            ...prev,
+            ['multi_' + index]: !prev['multi_' + index]
+          }));
+        }}
+      >
+        {visiblePreviews['multi_' + index] ? 'Hide extracted text' : 'Show extracted text'}
+      </button>
+    </div>
+
+    {visiblePreviews['multi_' + index] && (
+      <pre className="text-xs text-gray-300 whitespace-pre-wrap mt-1 max-h-48 overflow-y-auto border border-gray-600 p-2 rounded">
+        {file.content || "No content available."}
+      </pre>
+    )}
   </div>
-)}
+))}
 
 {/* Run MILO Button */}
 <button
