@@ -332,7 +332,7 @@ const systemPrompt = buildSystemPrompt(selectedPatient?.name);
   date: new Date().toISOString().split('T')[0],
   values: extractedLabs,
   recommendation: aiMessage.text,
-  fileUrl: uploadedFiles?.[uploadedFiles.length - 1]?.fileUrl || null
+  fileUrl: multiFiles?.[multiFiles.length - 1]?.fileUrl || null
 };
 
       await updateDoc(doc(db, 'patients', selectedPatient.id), {
