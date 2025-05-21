@@ -7,9 +7,7 @@ import { generateLabPDF } from './utils/pdfGenerator';
 import { buildSystemPrompt } from './utils/miloPrompt';
 import { extractTextFromImagePDF } from './utils/ocrReader';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from './firebase';
-import { storage } from "./firebase"; // Adjust path if needed
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from './firebase';
 import {
@@ -334,7 +332,7 @@ const systemPrompt = buildSystemPrompt(selectedPatient?.name);
     };
     // 🔥 Auto-generate and upload MILO PDF
 const pdfBlob = await generateLabPDFBlob(aiMessage.text, selectedPatient);
-const storageRef = ref(storage, `labs/${selectedPatient.id}/guidance-${Date.now()}.pdf`);
+const storageRef = storageRef(storage, `labs/${selectedPatient.id}/guidance-${Date.now()}.pdf`);
 await uploadBytes(storageRef, pdfBlob);
 const fileUrl = await getDownloadURL(storageRef);
 
@@ -350,7 +348,7 @@ const fileUrl = await getDownloadURL(storageRef);
   date: new Date().toISOString().split('T')[0],
   values: extractedLabs,
   recommendation: aiMessage.text,
-  fileUrl  // ⬅️ this links directly to the PDF version of the AI output
+  fileUrl // ✅ the uploaded PDF's link
 };
 
       await updateDoc(doc(db, 'patients', selectedPatient.id), {
