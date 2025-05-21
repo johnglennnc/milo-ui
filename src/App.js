@@ -16,6 +16,7 @@ import {
   updateDoc,
   doc,
   setDoc,
+  deleteDoc,
   arrayUnion,
   onSnapshot,
   query,
@@ -661,21 +662,26 @@ const handleSignUp = async (e) => {
 
 
       <div className="flex space-x-4 justify-center mb-6">
-        {['ask', 'lab', 'patients'].map(tab => (
-          <button
-            key={tab}
-            className={`px-4 py-2 rounded-md font-medium capitalize transition duration-200 ${
-              activeTab === tab
-                ? 'bg-milo-blue text-white shadow-glow'
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-            }`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab === 'ask' ? 'Ask MILO' : tab === 'lab' ? 'Lab Reports' : 'Patients'}
-          </button>
-        ))}
-      </div>
-
+  {['ask', 'lab', 'select', 'records'].map(tab => (
+    <button
+      key={tab}
+      className={`px-4 py-2 rounded-md font-medium capitalize transition duration-200 ${
+        activeTab === tab
+          ? 'bg-milo-blue text-white shadow-glow'
+          : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+      }`}
+      onClick={() => setActiveTab(tab)}
+    >
+      {tab === 'ask'
+        ? 'Ask MILO'
+        : tab === 'lab'
+        ? 'Lab Reports'
+        : tab === 'select'
+        ? 'Patient Selection'
+        : 'Patient Records'}
+    </button>
+  ))}
+</div>
 
       {activeTab === 'ask' && (
         <>
@@ -894,8 +900,81 @@ setVisiblePreviews(prev => ({ ...prev, ...newInputPreviews }));
       )}
 
 
-      {activeTab === 'patients' && (
-        <>
+      {activeTab === 'select' && (
+        <>{activeTab === 'records' && (
+  <>
+    <h2 className="text-2xl font-semibold mb-4">Patient Records</h2>
+
+    {!selectedPatient ? (
+      <>
+        <input
+          type="text"
+          placeholder="Search patients..."
+          className="mb-3 bg-gray-900 border border-gray-600 rounded px-3 py-2 w-full md:w-1/2 text-white"
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+        />
+        <ul className="space-y-2">
+          {patients
+            .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+            .map((p) => (
+              <li
+                key={p.id}
+                className="cursor-pointer bg-gray-800 p-3 rounded hover:bg-gray-700 transition flex justify-between items-center"
+                onClick={() => setSelectedPatient(p)}
+              >
+                <span>
+                  <strong>{p.name}</strong> — {p.dob || 'DOB N/A'}
+                </span>
+                <span className="text-sm text-gray-400">{(p.labs?.length || 0)} uploads</span>
+              </li>
+            ))}
+        </ul>
+      </>
+    ) : (
+      <>
+        <div className="mb-4">
+          <h3 className="text-xl font-bold mb-1">{selectedPatient.name}</h3>
+          <p className="text-sm text-gray-400 mb-2">DOB: {selectedPatient.dob || 'N/A'}</p>
+
+          <button
+            onClick={async () => {
+              if (confirm(`Are you sure you want to delete ${selectedPatient.name}? This cannot be undone.`)) {
+                await deleteDoc(doc(db, 'patients', selectedPatient.id));
+                setSelectedPatient(null);
+                alert('Patient deleted.');
+              }
+            }}
+            className="text-red-500 hover:text-red-300 text-sm underline"
+          >
+            Delete Patient
+          </button>
+        </div>
+
+        <h4 className="text-lg font-semibold mb-2">Uploaded Lab Reports:</h4>
+        {selectedPatient.labs?.length ? (
+          <ul className="list-disc ml-6 space-y-1 text-sm">
+            {selectedPatient.labs.map((lab, idx) => (
+              <li key={idx}>
+                <span className="text-white">📄 {lab.date}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-gray-400">No lab uploads yet.</p>
+        )}
+
+        <button
+          onClick={() => setSelectedPatient(null)}
+          className="mt-6 text-blue-400 hover:underline text-sm"
+        >
+          ← Back to Patient Records
+        </button>
+      </>
+    )}
+  </>
+)}
+
           <h2 className="text-2xl font-semibold mb-4">Patient Manager</h2>
           <div className="flex space-x-3 mb-4">
             <button
