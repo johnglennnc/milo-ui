@@ -344,11 +344,17 @@ const fileUrl = await getDownloadURL(storageRef);
     // ✅ Auto-extract and save lab values if applicable
     const extractedLabs = extractLabValues(textToSend);
     if (selectedPatient && (extractedLabs.estradiol || extractedLabs.progesterone || extractedLabs.dhea)) {
+     const pdfBlob = await generateLabPDFBlob(aiMessage.text, selectedPatient);
+
+const fileRef = storageRef(storage, `labs/${selectedPatient.id}/guidance-${Date.now()}.pdf`);
+await uploadBytes(fileRef, pdfBlob);
+const fileUrl = await getDownloadURL(fileRef);
+
       const labEntry = {
   date: new Date().toISOString().split('T')[0],
   values: extractedLabs,
   recommendation: aiMessage.text,
-  fileUrl // ✅ the uploaded PDF's link
+  fileUrl // ✅ this now works
 };
 
       await updateDoc(doc(db, 'patients', selectedPatient.id), {
