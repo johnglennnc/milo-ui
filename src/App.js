@@ -939,7 +939,8 @@ setVisiblePreviews(prev => ({ ...prev, ...newInputPreviews }));
 
           <button
             onClick={async () => {
-              if (confirm(`Are you sure you want to delete ${selectedPatient.name}? This cannot be undone.`)) {
+              // eslint-disable-next-line no-restricted-globals
+if (confirm(`Are you sure you want to delete ${selectedPatient.name}? This cannot be undone.`)) {
                 await deleteDoc(doc(db, 'patients', selectedPatient.id));
                 setSelectedPatient(null);
                 alert('Patient deleted.');
