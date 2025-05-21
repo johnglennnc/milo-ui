@@ -158,17 +158,6 @@ const downloadAsPDF = (text, patient = null, labEntry = null) => {
     .save();
 };
 
-const generateLabPDFBlob = async (guidanceText, patient = {}) => {
-  const element = document.createElement('div');
-  element.innerHTML = `
-    <div style="font-family: 'Inter', sans-serif; padding: 20px; white-space: pre-wrap;">
-      <h2>${patient.name || 'Patient'} - ${new Date().toLocaleDateString()}</h2>
-      <pre>${guidanceText}</pre>
-    </div>
-  `;
-
-  return await html2pdf().from(element).outputPdf('blob');
-};
 
 // ✅ Main App starts
 function App() {
