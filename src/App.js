@@ -178,7 +178,9 @@ function App() {
   const [patientMode, setPatientMode] = useState('select');
   const [userInfo, setUserInfo] = useState(null);
   const [uploadedFiles, setUploadedFiles] = useState([]);
-  const [visiblePreviews, setVisiblePreviews] = useState({});
+  const [visiblePreviews, setVisiblePreviews] = useState(() => {
+  return {}; // All previews are hidden by default
+});
   const [pendingMiloTrigger, setPendingMiloTrigger] = useState(false);
 
   // ✅ Fixed useEffect properly
@@ -380,6 +382,12 @@ const systemPrompt = buildSystemPrompt(selectedPatient?.name);
   }
 console.log("📂 Upload entry preview:", newEntries);
   setUploadedFiles(prev => [...prev, ...newEntries]);
+  const newPreviewStates = {};
+newEntries.forEach((_, idx) => {
+  const fileIndex = uploadedFiles.length + idx;
+  newPreviewStates['uploaded_' + fileIndex] = false;
+});
+setVisiblePreviews(prev => ({ ...prev, ...newPreviewStates }));
   setPendingMiloTrigger(true);
   setUploading(false);
 };
@@ -721,6 +729,12 @@ const handleSignUp = async (e) => {
   );
 
   setMultiFiles(prev => [...prev, ...processed]);
+  const newDropPreviews = {};
+processed.forEach((_, idx) => {
+  const fileIndex = multiFiles.length + idx;
+  newDropPreviews['multi_' + fileIndex] = false;
+});
+setVisiblePreviews(prev => ({ ...prev, ...newDropPreviews }));
 }}
   className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center cursor-pointer hover:border-blue-500 transition bg-gray-800"
   onClick={() => document.getElementById('multiFileUpload').click()}
@@ -751,6 +765,12 @@ const handleSignUp = async (e) => {
       })
     );
     setMultiFiles(prev => [...prev, ...processed]);
+    const newInputPreviews = {};
+processed.forEach((_, idx) => {
+  const fileIndex = multiFiles.length + idx;
+  newInputPreviews['multi_' + fileIndex] = false;
+});
+setVisiblePreviews(prev => ({ ...prev, ...newInputPreviews }));
   }}
 />
 </div>
