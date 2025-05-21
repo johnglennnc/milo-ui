@@ -900,14 +900,13 @@ setVisiblePreviews(prev => ({ ...prev, ...newInputPreviews }));
       )}
 
 
-      {activeTab === 'select' && (
-        <>{activeTab === 'records' && (
+      {activeTab === 'records' && (
   <>
     <h2 className="text-2xl font-semibold mb-4">Patient Records</h2>
 
     {!selectedPatient ? (
       <>
-      <p className="text-sm text-gray-400 mb-4">Loaded {patients.length} patients</p>
+        <p className="text-sm text-gray-400 mb-4">Loaded {patients.length} patients</p>
         <input
           type="text"
           placeholder="Search patients..."
@@ -941,7 +940,7 @@ setVisiblePreviews(prev => ({ ...prev, ...newInputPreviews }));
           <button
             onClick={async () => {
               // eslint-disable-next-line no-restricted-globals
-if (confirm(`Are you sure you want to delete ${selectedPatient.name}? This cannot be undone.`)) {
+              if (confirm(`Are you sure you want to delete ${selectedPatient.name}? This cannot be undone.`)) {
                 await deleteDoc(doc(db, 'patients', selectedPatient.id));
                 setSelectedPatient(null);
                 alert('Patient deleted.');
