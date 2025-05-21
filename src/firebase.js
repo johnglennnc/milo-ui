@@ -4,12 +4,12 @@ import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth'
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCxfRASursqFekKV8aNBP8fC9DxIIhqOwE",
-  authDomain: "milo-live-4a8b5.firebaseapp.com",
-  projectId: "milo-live-4a8b5",
-  storageBucket: "milo-live-4a8b5.appspot.com",
-  messagingSenderId: "14607500766",
-  appId: "1:14607500766:web:e2188b4cca4b49c938094f"
+  apiKey: "AIzaSyA0MLx37A85YFNu3S6-RDTB2kO6nQvHXhA",
+  authDomain: "milo-sandbox-92c4a.firebaseapp.com",
+  projectId: "milo-sandbox-92c4a",
+  storageBucket: "milo-sandbox-92c4a.appspot.com",
+  messagingSenderId: "480638447868",
+  appId: "1:480638447868:web:500bceedac79ae61526779"
 };
 
 const app = initializeApp(firebaseConfig);
