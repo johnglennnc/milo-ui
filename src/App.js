@@ -808,20 +808,19 @@ const handleSignUp = async (e) => {
       onClick={(e) => {
         e.preventDefault();
         setVisiblePreviews(prev => {
-          const updated = { ...prev, [idx]: !prev[idx] };
-          console.log("🔍 Current Preview States:", updated);
-          return updated;
-        });
+  const key = 'uploaded_' + idx;
+  return { ...prev, [key]: !prev[key] };
+});
       }}
     >
-      {visiblePreviews[idx] ? 'Hide extracted text' : 'Show extracted text'}
+      {visiblePreviews['uploaded_' + idx] ? 'Hide extracted text' : 'Show extracted text'}
     </button>
 
-    {visiblePreviews[idx] && (
-      <pre className="text-xs text-gray-300 whitespace-pre-wrap mt-1 max-h-48 overflow-y-auto border border-gray-600 p-2 rounded">
-        {f.content || "No content available."}
-      </pre>
-    )}
+    {visiblePreviews['uploaded_' + idx] && (
+  <pre className="text-xs text-gray-300 whitespace-pre-wrap mt-1 max-h-48 overflow-y-auto border border-gray-600 p-2 rounded">
+    {f.content || "No content available."}
+  </pre>
+)}
 
     <br />
     {f.content && looksLikeScannedPDF(f.content) && (
