@@ -907,6 +907,7 @@ setVisiblePreviews(prev => ({ ...prev, ...newInputPreviews }));
 
     {!selectedPatient ? (
       <>
+      <p className="text-sm text-gray-400 mb-4">Loaded {patients.length} patients</p>
         <input
           type="text"
           placeholder="Search patients..."
