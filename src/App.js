@@ -662,7 +662,7 @@ const handleSignUp = async (e) => {
 
 
       <div className="flex space-x-4 justify-center mb-6">
-  {['ask', 'lab', 'select', 'records'].map(tab => (
+  {['ask', 'lab', 'records'].map(tab => (
     <button
       key={tab}
       className={`px-4 py-2 rounded-md font-medium capitalize transition duration-200 ${
@@ -707,6 +707,25 @@ const handleSignUp = async (e) => {
 
       {activeTab === 'lab' && (
         <>
+          <div className="mb-6">
+  <label className="block text-sm font-medium mb-1 text-white">Select Patient:</label>
+  <select
+    value={selectedPatient?.id || ''}
+    onChange={(e) => {
+      const patient = patients.find(p => p.id === e.target.value);
+      setSelectedPatient(patient);
+      setAskMessages([]);
+      setLabMessages([]);
+    }}
+    className="bg-gray-900 border border-gray-600 rounded px-3 py-2 w-full md:w-1/2 text-white"
+  >
+    <option value="" disabled>Select patient</option>
+    {patients.map(p => (
+      <option key={p.id} value={p.id}>{p.name}</option>
+    ))}
+  </select>
+</div>
+
           {!selectedPatient ? (
             <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 p-4 rounded mb-6">
               Please select a patient before uploading lab reports.
@@ -957,7 +976,14 @@ setVisiblePreviews(prev => ({ ...prev, ...newInputPreviews }));
           <ul className="list-disc ml-6 space-y-1 text-sm">
             {selectedPatient.labs.map((lab, idx) => (
               <li key={idx}>
-                <span className="text-white">📄 {lab.date}</span>
+                <a
+  href={lab.fileUrl}
+  target="_blank"
+  rel="noopener noreferrer"
+  className="text-blue-400 hover:underline"
+>
+  📄 {lab.date}
+</a>
               </li>
             ))}
           </ul>
