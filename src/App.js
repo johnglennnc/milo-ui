@@ -327,10 +327,11 @@ const systemPrompt = buildSystemPrompt(selectedPatient?.name);
     const extractedLabs = extractLabValues(textToSend);
     if (selectedPatient && (extractedLabs.estradiol || extractedLabs.progesterone || extractedLabs.dhea)) {
       const labEntry = {
-        date: new Date().toISOString().split('T')[0],
-        values: extractedLabs,
-        recommendation: aiMessage.text
-      };
+  date: new Date().toISOString().split('T')[0],
+  values: extractedLabs,
+  recommendation: aiMessage.text,
+  fileUrl: uploadedFiles?.[uploadedFiles.length - 1]?.fileUrl || null
+};
 
       await updateDoc(doc(db, 'patients', selectedPatient.id), {
         labs: arrayUnion(labEntry)
@@ -754,11 +755,17 @@ const handleSignUp = async (e) => {
         extractedText = await file.text();
       }
 
-      return {
-        name: file.name,
-        date: file.lastModified,
-        content: extractedText.trim()
-      };
+      const storageRef = ref(storage, `labs/${file.name}-${Date.now()}`);
+await uploadBytes(storageRef, file);
+const fileUrl = await getDownloadURL(storageRef);
+
+return {
+  name: file.name,
+  date: file.lastModified,
+  content: extractedText.trim(),
+  fileUrl
+};
+
     })
   );
 
