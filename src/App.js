@@ -25,6 +25,21 @@ import {
   where
 } from 'firebase/firestore';
 import { extractTextHybrid } from './utils/hybridReader';
+const testStorageUpload = async () => {
+  const testBlob = new Blob(["This is a test file"], { type: 'text/plain' });
+  const testRef = ref(storage, 'test-folder/test-file.txt');
+
+  try {
+    await uploadBytes(testRef, testBlob);
+    const url = await getDownloadURL(testRef);
+    console.log("✅ Test upload successful:", url);
+    alert("File uploaded! Check console for download link.");
+  } catch (err) {
+    console.error("❌ Test upload failed:", err);
+    alert("Upload failed. See console for details.");
+  }
+};
+
 function cleanLabText(raw) {
   return raw
     .replace(/[^\x20-\x7E\n\r\t:.,;()\-+%°]/g, '') // Strip binary/gibberish
@@ -847,6 +862,12 @@ setVisiblePreviews(prev => ({ ...prev, ...newInputPreviews }));
   }`}
 >
   {loading ? 'Analyzing files...' : 'Run Uploaded Files'}
+</button>
+<button
+  onClick={testStorageUpload}
+  className="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+>
+  Test Firebase Upload
 </button>
               {uploadedFiles.length > 0 && (
   <div className="bg-gray-800 border border-gray-600 p-4 rounded-lg mt-4">
