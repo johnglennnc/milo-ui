@@ -6,6 +6,8 @@ import { auth } from './firebase';
 import { generateLabPDF } from './utils/pdfGenerator';
 import { buildSystemPrompt } from './utils/miloPrompt';
 import { extractTextFromImagePDF } from './utils/ocrReader';
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "./firebase"; // Adjust path if needed
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from './firebase';
 import {
