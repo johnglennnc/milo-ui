@@ -7,6 +7,8 @@ import { generateLabPDF } from './utils/pdfGenerator';
 import { buildSystemPrompt } from './utils/miloPrompt';
 import { extractTextFromImagePDF } from './utils/ocrReader';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { generateLabPDFBlob } from './utils/pdfGenerator'; // correct the path if needed
 import { storage } from './firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from './firebase';
@@ -280,20 +282,10 @@ function validateMILOResponse(text) {
   setLoading(true);
 
   const model = 'gpt-4';
-  const today = new Date().toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric'
-  });
 
-  // ⛔ DELETE the old systemPrompt line if it’s here
-  // ✅ INSERT the new one right here:
-
- const mentioned = extractMentionedHormones(textToSend);
-const hormoneHeader = (h) => mentioned.has(h) ? `
-- **${h}**: Include if present.` : '';
-
-const systemPrompt = buildSystemPrompt(selectedPatient?.name);
+  const mentioned = extractMentionedHormones(textToSend);
+  const hormoneHeader = (h) => mentioned.has(h) ? `- **${h}**: Include if present.` : '';
+  const systemPrompt = buildSystemPrompt(selectedPatient?.name);
 
   try {
     const payload = {
@@ -309,8 +301,6 @@ const systemPrompt = buildSystemPrompt(selectedPatient?.name);
       temperature: 0.2
     };
 
-    console.log("🚀 Payload being sent to backend:", payload);
-
     const response = await fetch('/api/milo', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -323,39 +313,32 @@ const systemPrompt = buildSystemPrompt(selectedPatient?.name);
       throw new Error(errorData.error);
     }
 
-    // ✅ Define `data` BEFORE using it
     const data = await response.json();
-
     const aiMessage = {
       sender: 'milo',
       text: data.message.trim()
     };
-    // 🔥 Auto-generate and upload MILO PDF
-const pdfBlob = await generateLabPDFBlob(aiMessage.text, selectedPatient);
-const storageRef = storageRef(storage, `labs/${selectedPatient.id}/guidance-${Date.now()}.pdf`);
-await uploadBytes(storageRef, pdfBlob);
-const fileUrl = await getDownloadURL(storageRef);
 
-    // 🔍 Post-processing validation
     validateMILOResponse(aiMessage.text);
-
     setMessagesForTab(prev => [...prev, aiMessage]);
 
-    // ✅ Auto-extract and save lab values if applicable
     const extractedLabs = extractLabValues(textToSend);
-    if (selectedPatient && (extractedLabs.estradiol || extractedLabs.progesterone || extractedLabs.dhea)) {
-     const pdfBlob = await generateLabPDFBlob(aiMessage.text, selectedPatient);
 
-const fileRef = storageRef(storage, `labs/${selectedPatient.id}/guidance-${Date.now()}.pdf`);
-await uploadBytes(fileRef, pdfBlob);
-const fileUrl = await getDownloadURL(fileRef);
+    // ✅ Upload PDF and store in Firestore
+    if (selectedPatient && Object.keys(extractedLabs).length > 0) {
+      const pdfBlob = await generateLabPDFBlob(aiMessage.text);
+
+      const fileRef = ref(storage, `labs/${selectedPatient.id}/guidance-${Date.now()}.pdf`);
+      await uploadBytes(fileRef, pdfBlob, { contentType: 'application/pdf' });
+      const fileUrl = await getDownloadURL(fileRef);
+      console.log("🔥 PDF uploaded. File URL:", fileUrl);
 
       const labEntry = {
-  date: new Date().toISOString().split('T')[0],
-  values: extractedLabs,
-  recommendation: aiMessage.text,
-  fileUrl // ✅ this now works
-};
+        date: new Date().toISOString().split('T')[0],
+        values: extractedLabs,
+        recommendation: aiMessage.text,
+        fileUrl
+      };
 
       await updateDoc(doc(db, 'patients', selectedPatient.id), {
         labs: arrayUnion(labEntry)
@@ -376,6 +359,7 @@ const fileUrl = await getDownloadURL(fileRef);
 
   setLoading(false);
 };
+
 
 
 
