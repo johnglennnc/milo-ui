@@ -7,6 +7,8 @@ import { generateLabPDF } from './utils/pdfGenerator';
 import { buildSystemPrompt } from './utils/miloPrompt';
 import { extractTextFromImagePDF } from './utils/ocrReader';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from './firebase';
 import { storage } from "./firebase"; // Adjust path if needed
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from './firebase';
@@ -158,6 +160,17 @@ const downloadAsPDF = (text, patient = null, labEntry = null) => {
     .save();
 };
 
+const generateLabPDFBlob = async (guidanceText, patient = {}) => {
+  const element = document.createElement('div');
+  element.innerHTML = `
+    <div style="font-family: 'Inter', sans-serif; padding: 20px; white-space: pre-wrap;">
+      <h2>${patient.name || 'Patient'} - ${new Date().toLocaleDateString()}</h2>
+      <pre>${guidanceText}</pre>
+    </div>
+  `;
+
+  return await html2pdf().from(element).outputPdf('blob');
+};
 
 // ✅ Main App starts
 function App() {
@@ -319,6 +332,11 @@ const systemPrompt = buildSystemPrompt(selectedPatient?.name);
       sender: 'milo',
       text: data.message.trim()
     };
+    // 🔥 Auto-generate and upload MILO PDF
+const pdfBlob = await generateLabPDFBlob(aiMessage.text, selectedPatient);
+const storageRef = ref(storage, `labs/${selectedPatient.id}/guidance-${Date.now()}.pdf`);
+await uploadBytes(storageRef, pdfBlob);
+const fileUrl = await getDownloadURL(storageRef);
 
     // 🔍 Post-processing validation
     validateMILOResponse(aiMessage.text);
@@ -332,7 +350,7 @@ const systemPrompt = buildSystemPrompt(selectedPatient?.name);
   date: new Date().toISOString().split('T')[0],
   values: extractedLabs,
   recommendation: aiMessage.text,
-  fileUrl: multiFiles?.[multiFiles.length - 1]?.fileUrl || null
+  fileUrl  // ⬅️ this links directly to the PDF version of the AI output
 };
 
       await updateDoc(doc(db, 'patients', selectedPatient.id), {
