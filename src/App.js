@@ -381,7 +381,16 @@ const systemPrompt = buildSystemPrompt(selectedPatient?.name);
     }
   }
 console.log("📂 Upload entry preview:", newEntries);
-  setUploadedFiles(prev => [...prev, ...newEntries]);
+ setUploadedFiles(prev => {
+  const updated = [...prev, ...newEntries];
+  const newState = { ...visiblePreviews };
+  newEntries.forEach((_, i) => {
+    const key = 'uploaded_' + (prev.length + i);
+    newState[key] = false;
+  });
+  setVisiblePreviews(newState);
+  return updated;
+});
   const newPreviewStates = {};
 newEntries.forEach((_, idx) => {
   const fileIndex = uploadedFiles.length + idx;
