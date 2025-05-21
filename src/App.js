@@ -3,11 +3,10 @@ import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import html2pdf from 'html2pdf.js';
 import { auth } from './firebase';
-import { generateLabPDF } from './utils/pdfGenerator';
+import { generateLabPDF, generateLabPDFBlob } from './utils/pdfGenerator';
 import { buildSystemPrompt } from './utils/miloPrompt';
 import { extractTextFromImagePDF } from './utils/ocrReader';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { generateLabPDFBlob } from './utils/pdfGenerator'; // correct the path if needed
 import { storage } from './firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from './firebase';
