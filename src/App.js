@@ -7,7 +7,6 @@ import { generateLabPDF } from './utils/pdfGenerator';
 import { buildSystemPrompt } from './utils/miloPrompt';
 import { extractTextFromImagePDF } from './utils/ocrReader';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { generateLabPDFBlob } from './utils/pdfGenerator'; // correct the path if needed
 import { storage } from './firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
