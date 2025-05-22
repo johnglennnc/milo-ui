@@ -202,6 +202,28 @@ function App() {
   return {}; // All previews are hidden by default
 });
   const [pendingMiloTrigger, setPendingMiloTrigger] = useState(false);
+const handleCreatePatient = async () => {
+  if (!newPatientName || !newPatientDOB) {
+    alert('Please enter name and DOB.');
+    return;
+  }
+
+  try {
+    await addDoc(collection(db, 'patients'), {
+      name: newPatientName,
+      dob: newPatientDOB,
+      teamId: userInfo?.teamId || 'unknown',
+      createdAt: new Date().toISOString()
+    });
+    setNewPatientName('');
+    setNewPatientDOB('');
+    setPatientMode('select');
+    alert('✅ Patient created.');
+  } catch (err) {
+    console.error('❌ Error creating patient:', err);
+    alert('Failed to create patient.');
+  }
+};
 
   // ✅ Fixed useEffect properly
   useEffect(() => {
@@ -793,23 +815,67 @@ const handleSignUp = async (e) => {
       {activeTab === 'lab' && (
         <>
           <div className="mb-6">
-  <label className="block text-sm font-medium mb-1 text-white">Select Patient:</label>
-  <select
-    value={selectedPatient?.id || ''}
-    onChange={(e) => {
-      const patient = patients.find(p => p.id === e.target.value);
-      setSelectedPatient(patient);
-      setAskMessages([]);
-      setLabMessages([]);
-    }}
-    className="bg-gray-900 border border-gray-600 rounded px-3 py-2 w-full md:w-1/2 text-white"
-  >
-    <option value="" disabled>Select patient</option>
-    {patients.map(p => (
-      <option key={p.id} value={p.id}>{p.name}</option>
-    ))}
-  </select>
+  <label className="block text-sm font-medium mb-1 text-white">Patient:</label>
+
+  {patientMode === 'select' ? (
+    <>
+      <select
+        value={selectedPatient?.id || ''}
+        onChange={(e) => {
+          const patient = patients.find(p => p.id === e.target.value);
+          setSelectedPatient(patient);
+          setAskMessages([]);
+          setLabMessages([]);
+        }}
+        className="bg-gray-900 border border-gray-600 rounded px-3 py-2 w-full md:w-1/2 text-white"
+      >
+        <option value="" disabled>Select patient</option>
+        {patients.map(p => (
+          <option key={p.id} value={p.id}>
+            {p.name} (DOB: {p.dob})
+          </option>
+        ))}
+      </select>
+
+      <button
+        onClick={() => setPatientMode('create')}
+        className="mt-2 text-sm text-blue-400 hover:underline"
+      >
+        + New Patient
+      </button>
+    </>
+  ) : (
+    <>
+      <input
+        className="block w-full md:w-1/2 border p-2 rounded bg-gray-900 border-gray-600 text-white mb-2"
+        placeholder="Patient name"
+        value={newPatientName}
+        onChange={(e) => setNewPatientName(e.target.value)}
+      />
+      <input
+        type="date"
+        className="block w-full md:w-1/2 border p-2 rounded bg-gray-900 border-gray-600 text-white mb-2"
+        value={newPatientDOB}
+        onChange={(e) => setNewPatientDOB(e.target.value)}
+      />
+      <div className="flex gap-2">
+        <button
+          onClick={handleCreatePatient}
+          className="px-4 py-1 bg-green-500 text-white rounded hover:bg-green-600 transition"
+        >
+          Create
+        </button>
+        <button
+          onClick={() => setPatientMode('select')}
+          className="px-4 py-1 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 transition"
+        >
+          Cancel
+        </button>
+      </div>
+    </>
+  )}
 </div>
+
 
           {!selectedPatient ? (
             <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 p-4 rounded mb-6">
