@@ -351,15 +351,15 @@ function validateMILOResponse(text) {
         labs: [...(prev?.labs || []), labEntry]
       }));
     }
-  } catch (err) {
+    } catch (err) {
     console.error('OpenAI API error:', err);
     setMessagesForTab(prev => [
       ...prev,
       { sender: 'milo', text: "There was a problem retrieving a response. Please try again." }
     ]);
+  } finally {
+    setLoading(false);
   }
-
-  setLoading(false);
 };
 
 
@@ -746,7 +746,7 @@ const handleSignUp = async (e) => {
               {renderChatMessages(labMessages)}
               <button
   onClick={triggerMILOAnalysis}
-  className="mt-4 bg-purple-600 text-white px-5 py-2 rounded-lg hover:bg-purple-700 shadow transition"
+  className="mt-4 bg-milo-blue text-white px-5 py-2 rounded-lg hover:scale-105 hover:bg-blue-700 shadow-glow transition"
 >
   Analyze Most Recent Lab Report
 </button>
@@ -868,12 +868,6 @@ setVisiblePreviews(prev => ({ ...prev, ...newInputPreviews }));
   }`}
 >
   {loading ? 'Analyzing files...' : 'Run Uploaded Files'}
-</button>
-<button
-  onClick={testStorageUpload}
-  className="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
->
-  Test Firebase Upload
 </button>
               {uploadedFiles.length > 0 && (
   <div className="bg-gray-800 border border-gray-600 p-4 rounded-lg mt-4">
@@ -1035,78 +1029,7 @@ setVisiblePreviews(prev => ({ ...prev, ...newInputPreviews }));
   </>
 )}
 
-          <h2 className="text-2xl font-semibold mb-4">Patient Manager</h2>
-          <div className="flex space-x-3 mb-4">
-            <button
-              onClick={() => setPatientMode('select')}
-              className={`px-4 py-2 rounded ${patientMode === 'select' ? 'bg-milo-blue text-white' : 'bg-gray-700'}`}
-            >
-              Select Patient
-            </button>
-            <button
-              onClick={() => setPatientMode('create')}
-              className={`px-4 py-2 rounded ${patientMode === 'create' ? 'bg-milo-blue text-white' : 'bg-gray-700'}`}
-            >
-              New Patient
-            </button>
-          </div>
-
-
-          {patientMode === 'select' && (
-            <>
-              <input
-                type="text"
-                placeholder="Search patients..."
-                className="mb-3 bg-gray-900 border border-gray-600 rounded px-3 py-2 w-full md:w-1/2 text-white"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-              />
-              <select
-                value={selectedPatient?.id || ''}
-                onChange={e => {
-                  const patient = patients.find(p => p.id === e.target.value);
-                  setSelectedPatient(patient);
-                  setAskMessages([]);
-                  setLabMessages([]);
-                }}
-                className="bg-gray-900 border border-gray-600 rounded px-3 py-2 w-full md:w-1/2 text-white"
-              >
-                <option value="" disabled>Select patient</option>
-                {patients
-                  .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
-                  .map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-              </select>
-            </>
-          )}
-
-
-          {patientMode === 'create' && (
-  <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-2">
-    <input
-      type="text"
-      placeholder="New patient name"
-      value={newPatientName}
-      onChange={e => setNewPatientName(e.target.value)}
-      className="bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white"
-    />
-    <input
-      type="date"
-      placeholder="Date of Birth"
-      value={newPatientDOB}
-      onChange={e => setNewPatientDOB(e.target.value)}
-      className="bg-gray-900 border border-gray-600 rounded px-3 py-2 text-white"
-    />
-    <button
-      onClick={handleNewPatient}
-      className="bg-green-600 text-white px-4 py-2 rounded hover:scale-105"
-    >
-      Add Patient
-    </button>
-  </div>
-)}
-
+          
     </div>
   );
 }
