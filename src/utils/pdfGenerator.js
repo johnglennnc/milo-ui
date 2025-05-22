@@ -11,18 +11,16 @@ const formatDate = (isoString) => {
 
 function applyFormattingToText(rawText) {
   return rawText
-    // Make bold real
+    // Convert **bold** to real <strong> tags
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    // Wrap each hormone section in a container to avoid page breaks and add divider before hormone name
-    .replace(/(?:\n)?(<strong>[^<]+<\/strong>)/g, '</div><hr style="border:none;border-top:1px solid #ccc;margin:16px 0;"><div style="page-break-inside: avoid;">$1')
-    // Reopen a section at the very start
-    .replace(/^/, '<div style="page-break-inside: avoid;">')
-    // Close final container
-    .concat('</div>');
+    // Insert a line ONLY after each Clinical Plan section
+    .replace(/(<strong>Clinical Plan<\/strong>[\s\S]*?)(?=\n<strong>|$)/g, (match) => {
+      return `<div style="page-break-inside: avoid;">${match}<hr style="border:none;border-top:1px solid #ccc;margin:16px 0;" /></div>`;
+    });
 }
 
 /**
- * Download PDF
+ * Triggers download of a PDF file containing the given text and optional patient info.
  */
 export const generateLabPDF = ({ patient = null, aiResponse = '' }) => {
   const todayFormatted = formatDate(new Date().toISOString());
@@ -57,7 +55,8 @@ export const generateLabPDF = ({ patient = null, aiResponse = '' }) => {
 };
 
 /**
- * Return PDF as Blob for Firebase
+ * Returns a PDF blob instead of triggering a download.
+ * Used for uploading PDF to Firebase Storage automatically.
  */
 export async function generateLabPDFBlob(text) {
   const cleanText = applyFormattingToText(text);
@@ -84,4 +83,3 @@ export async function generateLabPDFBlob(text) {
       .catch(reject);
   });
 }
-
