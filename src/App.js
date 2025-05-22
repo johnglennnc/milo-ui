@@ -915,7 +915,7 @@ setVisiblePreviews(prev => ({ ...prev, ...newInputPreviews }));
 
     <button
   onClick={triggerMILOAnalysis}
-  className="mt-4 bg-purple-600 text-white px-5 py-2 rounded-lg hover:bg-purple-700 shadow transition"
+  className="mt-4 bg-milo-blue text-white px-5 py-2 rounded-lg hover:scale-105 hover:bg-blue-700 shadow-glow transition"
 >
   Analyze Most Recent Lab Report
 </button>
