@@ -179,6 +179,7 @@ function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [askMessages, setAskMessages] = useState([]);
   const [labMessages, setLabMessages] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
@@ -630,38 +631,61 @@ const handleSignUp = async (e) => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
         <form
-          onSubmit={handleLogin}
-          className="bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md"
-        >
-          <h2 className="text-2xl font-bold mb-6 text-center">Login to MILO</h2>
-          <input
-            type="text"
-            placeholder="Email"
-            value={loginUsername}
-            onChange={(e) => setLoginUsername(e.target.value)}
-            className="mb-4 w-full p-2 rounded bg-gray-700 border border-gray-600 text-white"
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={loginPassword}
-            onChange={(e) => setLoginPassword(e.target.value)}
-            className="mb-6 w-full p-2 rounded bg-gray-700 border border-gray-600 text-white"
-          />
-          <button
-            type="submit"
-            className="w-full bg-milo-blue text-white py-2 rounded hover:bg-blue-700 transition"
-          >
-            Log In
-          </button>
-          <button
-            type="button"
-            onClick={handleSignUp}
-            className="w-full mt-4 bg-green-600 text-white py-2 rounded hover:bg-green-700 transition"
-          >
-            Sign Up
-          </button>
-        </form>
+  onSubmit={handleLogin}
+  className="bg-gray-800 p-8 rounded-lg shadow-lg w-full max-w-md"
+>
+  <h2 className="text-2xl font-bold mb-6 text-center">Login to MILO</h2>
+
+  <input
+    type="text"
+    placeholder="Email"
+    value={loginUsername}
+    onChange={(e) => setLoginUsername(e.target.value)}
+    className="mb-4 w-full p-2 rounded bg-gray-700 border border-gray-600 text-white"
+  />
+
+  <div className="relative mb-2">
+    <input
+      type={showPassword ? 'text' : 'password'}
+      placeholder="Password"
+      value={loginPassword}
+      onChange={(e) => setLoginPassword(e.target.value)}
+      className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white pr-12"
+    />
+    <button
+      type="button"
+      onClick={() => setShowPassword(prev => !prev)}
+      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sm text-blue-400 hover:text-blue-600"
+    >
+      {showPassword ? 'Hide' : 'Show'}
+    </button>
+  </div>
+
+  <div className="text-right mb-6">
+    <button
+      type="button"
+      onClick={() => alert('Please contact your administrator to reset your password.')}
+      className="text-sm text-blue-400 hover:text-blue-600 underline"
+    >
+      Forgot Password?
+    </button>
+  </div>
+
+  <button
+    type="submit"
+    className="w-full bg-milo-blue text-white py-2 rounded hover:bg-blue-700 transition"
+  >
+    Log In
+  </button>
+
+  <button
+    type="button"
+    onClick={handleSignUp}
+    className="w-full mt-4 bg-green-600 text-white py-2 rounded hover:bg-green-700 transition"
+  >
+    Sign Up
+  </button>
+</form>
       </div>
     );
   }
@@ -670,8 +694,17 @@ const handleSignUp = async (e) => {
       <h1 className="text-4xl font-heading mb-8 text-center text-milo-neon tracking-wide">
         MILO • Clinical Assistant
       </h1>
-
-
+<div className="text-right mb-4">
+  <button
+    onClick={() => {
+      auth.signOut();
+      setIsAuthenticated(false);
+    }}
+    className="text-sm text-red-400 hover:text-red-600 underline"
+  >
+    Logout
+  </button>
+</div>
       <div className="flex space-x-4 justify-center mb-6">
   {['ask', 'lab', 'records'].map(tab => (
     <button
@@ -1024,14 +1057,17 @@ setVisiblePreviews(prev => ({ ...prev, ...newInputPreviews }));
         >
           ← Back to Patient Records
         </button>
-      </>
+            </>
     )}
   </>
 )}
 
-          
-    </div>
-  );
+  <footer className="mt-10 text-center text-sm text-gray-500">
+    NeuralCure AI, Inc. © 2025
+  </footer>
+
+</div>
+);
 }
 
 export default App;
