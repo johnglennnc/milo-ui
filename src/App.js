@@ -6,6 +6,7 @@ import { auth } from './firebase';
 import { generateLabPDF, generateLabPDFBlob } from './utils/pdfGenerator';
 import { buildSystemPrompt } from './utils/miloPrompt';
 import { extractTextFromImagePDF } from './utils/ocrReader';
+import { applyFormattingToText } from './path-to-your-pdf-utils';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from './firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
@@ -561,17 +562,50 @@ const renderChatMessages = (msgList) => (
   className="text-xs text-blue-400 hover:text-blue-600 underline disabled:opacity-40"
   disabled={pdfLoading}
   onClick={() => {
-    setPdfLoading(true);
+  setPdfLoading(true);
 
-    setTimeout(() => {
-      generateLabPDF({
-        patient: selectedPatient,
-        aiResponse: msg.text
-      });
+  setTimeout(() => {
+    const formattedHTML = applyFormattingToText(msg.text);
 
-      setTimeout(() => setPdfLoading(false), 1500);
-    }, 100);
-  }}
+    const element = document.createElement('div');
+    element.innerHTML = `
+      <div style="font-family: 'Inter', sans-serif; padding: 20px; font-size: 12px; line-height: 1.6;">
+        <img src="/MSMW_Logo_RGB.png" alt="Modern Logo" style="max-width: 200px; display: block; margin: 0 auto 10px auto;" />
+        <p style="margin: 0 0 6px 0;"><strong>Patient Name:</strong> ${selectedPatient?.name || 'N/A'}</p>
+        <p style="margin: 0 0 6px 0;"><strong>Date of Birth:</strong> ${selectedPatient?.dob || 'N/A'}</p>
+        <p style="margin: 0 20px 20px 0;"><strong>Report Date:</strong> ${new Date().toLocaleDateString()}</p>
+        ${formattedHTML}
+      </div>
+    `;
+
+    const logo = element.querySelector('img');
+    const generate = () => {
+      setTimeout(() => {
+        html2pdf()
+          .from(element)
+          .set({
+            margin: 10,
+            filename: `MILO-${selectedPatient?.name || 'Patient'}-${new Date().toISOString().slice(0, 10)}.pdf`,
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          })
+          .save();
+
+        setTimeout(() => setPdfLoading(false), 1500);
+      }, 200);
+    };
+
+    if (logo?.complete) {
+      generate();
+    } else {
+      logo.onload = generate;
+      logo.onerror = () => {
+        console.warn("⚠️ Logo failed to load — proceeding anyway.");
+        generate();
+      };
+    }
+  }, 100);
+}}
 >
   {pdfLoading ? 'Preparing PDF…' : 'Download PDF'}
 </button>
