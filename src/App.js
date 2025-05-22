@@ -757,29 +757,35 @@ const handleSignUp = async (e) => {
   const droppedFiles = Array.from(e.dataTransfer.files || []);
 
   const processed = await Promise.all(
-    droppedFiles.map(async (file) => {
-      let extractedText = '';
-      if (file.type === 'application/pdf') {
-        extractedText = await extractTextHybrid(file);
-      } else {
-        extractedText = await file.text();
-      }
+  droppedFiles.map(async (file) => {
+    let extractedText = '';
 
-      const storageRef = ref(storage, `labs/${file.name}-${Date.now()}`);
-await uploadBytes(storageRef, file);
-const fileUrl = await getDownloadURL(storageRef);
+    if (file.type === 'application/pdf') {
+      extractedText = await extractTextHybrid(file);
+    } else {
+      extractedText = await file.text();
+    }
 
-return {
-  name: file.name,
-  date: file.lastModified,
-  content: extractedText.trim(),
-  fileUrl
-};
+    // 🔥 Upload to Firebase
+    const filePath = `labs/${selectedPatient?.id || 'unknown'}/${file.name}-${Date.now()}`;
+    const storageRefInstance = ref(storage, filePath);
+    await uploadBytes(storageRefInstance, file);
 
-    })
-  );
+    // ✅ Get public URL
+    const fileUrl = await getDownloadURL(storageRefInstance);
 
-  setMultiFiles(prev => [...prev, ...processed]);
+    // ✅ Return all values
+    return {
+      name: file.name,
+      date: file.lastModified,
+      content: extractedText.trim(),
+      fileUrl
+    };
+  })
+);
+
+// ✅ Save this to state (or wherever you're using it)
+setMultiFiles(prev => [...prev, ...processed]);
   const newDropPreviews = {};
 processed.forEach((_, idx) => {
   const fileIndex = multiFiles.length + idx;
