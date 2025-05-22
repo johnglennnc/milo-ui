@@ -41,22 +41,37 @@ export const generateLabPDF = ({ patient = null, aiResponse = '' }) => {
     </div>
   `;
 
-  html2pdf()
-    .from(element)
-    .set({
-      margin: 10,
-      filename: (() => {
-        const rawName = (patient?.name || '').trim();
-        const nameParts = rawName.split(/\s+/);
-        const firstName = nameParts[0] || 'Unknown';
-        const lastName = nameParts[1] || 'Patient';
-        const datePart = new Date().toISOString().slice(0, 10);
-        return `MILO-${firstName}-${lastName}-${datePart}.pdf`;
-      })(),
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    })
-    .save();
+    const generate = () => {
+    setTimeout(() => {
+      html2pdf()
+        .from(element)
+        .set({
+          margin: 10,
+          filename: (() => {
+            const rawName = (patient?.name || '').trim();
+            const nameParts = rawName.split(/\s+/);
+            const firstName = nameParts[0] || 'Unknown';
+            const lastName = nameParts[1] || 'Patient';
+            const datePart = new Date().toISOString().slice(0, 10);
+            return `MILO-${firstName}-${lastName}-${datePart}.pdf`;
+          })(),
+          html2canvas: { scale: 2 },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        })
+        .save();
+    }, 200); // slight delay for layout stabilization
+  };
+
+  const logo = element.querySelector('img');
+  if (logo?.complete) {
+    generate();
+  } else {
+    logo.onload = generate;
+    logo.onerror = () => {
+      console.warn("⚠️ Logo failed to load — proceeding anyway.");
+      generate();
+    };
+  }
 };
 
 export async function generateLabPDFBlob(text, patient = null) {
