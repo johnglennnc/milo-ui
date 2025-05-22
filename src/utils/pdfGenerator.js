@@ -28,7 +28,7 @@ export const generateLabPDF = ({ patient = null, aiResponse = '' }) => {
   element.innerHTML = `
     <div style="font-family: 'Inter', sans-serif; padding: 20px; white-space: pre-wrap; font-size: 12px; line-height: 1.6;">
       <div style="text-align: center; margin-bottom: 20px;">
-        <img src="/logo.png" alt="Logo" style="max-width: 150px;" />
+        <img src="/MSMW_Logo_RGB.png" alt="Modern Logo" style="max-width: 200px;" />
       </div>
       ${header}
       <pre style="white-space: pre-wrap; font-family: inherit; font-size: inherit; line-height: inherit;">${aiResponse}</pre>
@@ -56,7 +56,7 @@ export async function generateLabPDFBlob(text) {
     element.innerHTML = `
       <div style="font-family: 'Inter', sans-serif; padding: 20px; white-space: pre-wrap; font-size: 12px; line-height: 1.6;">
         <div style="text-align: center; margin-bottom: 20px;">
-          <img src="/logo.png" alt="Logo" style="max-width: 150px;" />
+          <img src="/MSMW_Logo_RGB.png" alt="Modern Logo" style="max-width: 200px;" />
         </div>
         <pre style="white-space: pre-wrap; font-family: inherit; font-size: inherit; line-height: inherit;">${text}</pre>
       </div>
@@ -75,4 +75,3 @@ export async function generateLabPDFBlob(text) {
       .catch(reject);
   });
 }
-
