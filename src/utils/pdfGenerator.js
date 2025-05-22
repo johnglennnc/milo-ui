@@ -9,7 +9,9 @@ const formatDate = (isoString) => {
   return `${month}/${day}/${year}`;
 };
 
-function applyFormattingToText(rawText) {
+export function applyFormattingToText(rawText) {
+  // same body, no changes needed
+
   return rawText
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Convert markdown bold to HTML
     .replace(/(<strong>Clinical Plan<\/strong>)/g, '<br/><br/>$1') // Add spacing before Clinical Plan
