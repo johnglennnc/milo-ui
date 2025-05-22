@@ -11,17 +11,15 @@ const formatDate = (isoString) => {
 
 function applyFormattingToText(rawText) {
   return rawText
-    // Convert **bold** to real <strong> tags
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    // Insert a line ONLY after each Clinical Plan section
-    .replace(/(<strong>Clinical Plan<\/strong>[\s\S]*?)(?=\n<strong>|$)/g, (match) => {
-      return `<div style="page-break-inside: avoid;">${match}<hr style="border:none;border-top:1px solid #ccc;margin:16px 0;" /></div>`;
-    });
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Convert markdown bold to HTML
+    .replace(/(<strong>Clinical Plan<\/strong>)/g, '<br/><br/>$1') // Add spacing before Clinical Plan
+    .replace(
+      /(<strong>Clinical Plan<\/strong>[\s\S]*?)(?=\n<strong>|$)/g,
+      (match) =>
+        `<div style="page-break-inside: avoid;">${match}<hr style="border:none;border-top:1px solid #ccc;margin:16px 0;" /></div>`
+    );
 }
 
-/**
- * Triggers download of a PDF file containing the given text and optional patient info.
- */
 export const generateLabPDF = ({ patient = null, aiResponse = '' }) => {
   const todayFormatted = formatDate(new Date().toISOString());
   const dobFormatted = patient?.dob ? formatDate(patient.dob) : 'N/A';
@@ -47,18 +45,21 @@ export const generateLabPDF = ({ patient = null, aiResponse = '' }) => {
     .from(element)
     .set({
       margin: 10,
-      filename: `MILO-Guidance-${new Date().toISOString().slice(0, 10)}.pdf`,
+      filename: (() => {
+        const rawName = (patient?.name || '').trim();
+        const nameParts = rawName.split(/\s+/);
+        const firstName = nameParts[0] || 'Unknown';
+        const lastName = nameParts[1] || 'Patient';
+        const datePart = new Date().toISOString().slice(0, 10);
+        return `MILO-${firstName}-${lastName}-${datePart}.pdf`;
+      })(),
       html2canvas: { scale: 2 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     })
     .save();
 };
 
-/**
- * Returns a PDF blob instead of triggering a download.
- * Used for uploading PDF to Firebase Storage automatically.
- */
-export async function generateLabPDFBlob(text) {
+export async function generateLabPDFBlob(text, patient = null) {
   const cleanText = applyFormattingToText(text);
 
   return new Promise((resolve, reject) => {
@@ -74,7 +75,14 @@ export async function generateLabPDFBlob(text) {
       .from(element)
       .set({
         margin: 10,
-        filename: `MILO-Guidance-${new Date().toISOString().slice(0, 10)}.pdf`,
+        filename: (() => {
+          const rawName = (patient?.name || '').trim();
+          const nameParts = rawName.split(/\s+/);
+          const firstName = nameParts[0] || 'Unknown';
+          const lastName = nameParts[1] || 'Patient';
+          const datePart = new Date().toISOString().slice(0, 10);
+          return `MILO-${firstName}-${lastName}-${datePart}.pdf`;
+        })(),
         html2canvas: { scale: 2 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       })
