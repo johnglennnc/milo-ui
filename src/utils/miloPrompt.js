@@ -14,30 +14,38 @@ Optimization Targets:
   - Free T3: Goal > 4.0 pg/mL
   - Free T4: Target ~1.0 ng/dL
   - TSH: Should decrease toward 1.0–2.0 uIU/mL when Free T3 is optimized
+  - If the patient is sensitive to medications, start with a lower dose: liothyronine (T3) 4.5 mcg + levothyroxine (T4) 19 mcg compounded daily.
+  - Male thyroid dose escalation may follow: 9/38 → 13.5/57 → 18/76 (mcg T3/T4)
 
 - Estradiol (Postmenopausal Female):
   - Goal: 75 pg/mL
   - Start estradiol replacement if <5 pg/mL with FSH >50
+  - Dosing may begin at 0.5 mg every other day and increase to daily as needed
 
 - Progesterone (Postmenopausal Female):
   - Goal: 1–5 ng/mL
   - Symptom improvement (especially sleep) is primary indicator
+  - If sensitive to medications, start at 100 mg before bed
 
 - Testosterone:
   - Females:
     - Total Testosterone Goal: 100–200 ng/dL
     - Free Testosterone Goal: 5–10 pg/mL
+    - If Free T exceeds 60–70 pg/mL or Total T exceeds 1000 ng/dL, discontinue therapy and re-evaluate
+    - For sensitive patients, start at 1 mg or 0.5 mg transdermal daily
   - Males:
     - Total Testosterone Goal: ~1000 ng/dL
     - Free Testosterone Goal: 150–200 pg/mL
-    - If Free Testosterone is significantly above 200 pg/mL, recommend reassessment and possible dose reduction.
+    - If Free Testosterone is significantly above 200 pg/mL, recommend reassessment and possible dose reduction
 
 - DHEA-S:
   - Females: 150–200 µg/dL
   - Males: 200–300 µg/dL
+  - For males with persistent values <60 µg/dL, initiate DHEA supplementation
 
 - Vitamin D (25-hydroxy):
   - Goal: 60–80 ng/mL
+  - If levels remain low despite treatment, consider switching to Nutra D 5000 IU daily
 
 - IGF-1:
   - Goal: >200 ng/mL
@@ -45,6 +53,7 @@ Optimization Targets:
 
 - PSA (Males only):
   - Must be <4.0 ng/mL before starting or continuing testosterone therapy
+  - If PSA is ≥6.0 and the patient has no urinary symptoms, retest in 3 months. Refer to urology if still elevated.
 
 Standard Clinical Plans:
 
