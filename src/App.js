@@ -183,6 +183,7 @@ function App() {
   const [askMessages, setAskMessages] = useState([]);
   const [labMessages, setLabMessages] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [patients, setPatients] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [newPatientName, setNewPatientName] = useState('');
@@ -557,16 +558,23 @@ const renderChatMessages = (msgList) => (
           {msg.sender === 'milo' && (
             <div className="mt-2 text-right">
               <button
-                className="text-xs text-blue-400 hover:text-blue-600 underline"
-                onClick={() =>
-                  generateLabPDF({
-                    patient: selectedPatient,
-                    aiResponse: msg.text
-                  })
-                }
-              >
-                Download PDF
-              </button>
+  className="text-xs text-blue-400 hover:text-blue-600 underline disabled:opacity-40"
+  disabled={pdfLoading}
+  onClick={() => {
+    setPdfLoading(true);
+
+    setTimeout(() => {
+      generateLabPDF({
+        patient: selectedPatient,
+        aiResponse: msg.text
+      });
+
+      setTimeout(() => setPdfLoading(false), 1500);
+    }, 100);
+  }}
+>
+  {pdfLoading ? 'Preparing PDF…' : 'Download PDF'}
+</button>
             </div>
           )}
         </div>
