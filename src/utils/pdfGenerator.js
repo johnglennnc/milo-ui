@@ -17,21 +17,26 @@ export const generateLabPDF = ({ patient = null, aiResponse = '' }) => {
   const dobFormatted = patient?.dob ? formatDate(patient.dob) : 'N/A';
 
   const header = patient ? `
-    <div style="margin-bottom: 20px;">
+    <div style="margin-bottom: 16px;">
       <strong>Patient Name:</strong> ${patient.name || 'N/A'}<br/>
       <strong>Date of Birth:</strong> ${dobFormatted}<br/>
       <strong>Report Date:</strong> ${todayFormatted}
     </div>
   ` : '';
 
+  // Bold hormone names and insert dividers
+  const cleanText = aiResponse
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n(?=<strong>)/g, '<hr style="border: none; border-top: 1px solid #ccc; margin: 16px 0;" />');
+
   const element = document.createElement('div');
   element.innerHTML = `
-    <div style="font-family: 'Inter', sans-serif; padding: 20px; white-space: pre-wrap; font-size: 12px; line-height: 1.6;">
-      <div style="text-align: center; margin-bottom: 20px;">
-        <img src="/MSMW_Logo_RGB.png" alt="Modern Logo" style="max-width: 200px;" />
+    <div style="font-family: 'Inter', sans-serif; padding: 20px 20px 10px 20px; white-space: pre-wrap; font-size: 12px; line-height: 1.6;">
+      <div style="text-align: center; margin-bottom: 10px;">
+        <img src="/MSMW_Logo_RGB.png" alt="Modern Logo" style="max-width: 200px; display: block; margin: 0 auto 10px auto;" />
       </div>
       ${header}
-      <pre style="white-space: pre-wrap; font-family: inherit; font-size: inherit; line-height: inherit;">${aiResponse}</pre>
+      <div style="white-space: pre-wrap;">${cleanText}</div>
     </div>
   `;
 
@@ -51,14 +56,18 @@ export const generateLabPDF = ({ patient = null, aiResponse = '' }) => {
  * Used for uploading PDF to Firebase Storage automatically.
  */
 export async function generateLabPDFBlob(text) {
+  const cleanText = text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n(?=<strong>)/g, '<hr style="border: none; border-top: 1px solid #ccc; margin: 16px 0;" />');
+
   return new Promise((resolve, reject) => {
     const element = document.createElement('div');
     element.innerHTML = `
-      <div style="font-family: 'Inter', sans-serif; padding: 20px; white-space: pre-wrap; font-size: 12px; line-height: 1.6;">
-        <div style="text-align: center; margin-bottom: 20px;">
-          <img src="/MSMW_Logo_RGB.png" alt="Modern Logo" style="max-width: 200px;" />
+      <div style="font-family: 'Inter', sans-serif; padding: 20px 20px 10px 20px; white-space: pre-wrap; font-size: 12px; line-height: 1.6;">
+        <div style="text-align: center; margin-bottom: 10px;">
+          <img src="/MSMW_Logo_RGB.png" alt="Modern Logo" style="max-width: 200px; display: block; margin: 0 auto 10px auto;" />
         </div>
-        <pre style="white-space: pre-wrap; font-family: inherit; font-size: inherit; line-height: inherit;">${text}</pre>
+        <div style="white-space: pre-wrap;">${cleanText}</div>
       </div>
     `;
 
