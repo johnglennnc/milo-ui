@@ -1111,4 +1111,6 @@ setVisiblePreviews(prev => ({ ...prev, ...newInputPreviews }));
 );
 }
 
+export { applyFormattingToText };
+
 export default App;
