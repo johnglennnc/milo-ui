@@ -27,6 +27,9 @@ export const generateLabPDF = ({ patient = null, aiResponse = '' }) => {
   const element = document.createElement('div');
   element.innerHTML = `
     <div style="font-family: 'Inter', sans-serif; padding: 20px; white-space: pre-wrap; font-size: 12px; line-height: 1.6;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <img src="/logo.png" alt="Logo" style="max-width: 150px;" />
+      </div>
       ${header}
       <pre style="white-space: pre-wrap; font-family: inherit; font-size: inherit; line-height: inherit;">${aiResponse}</pre>
     </div>
@@ -50,12 +53,26 @@ export const generateLabPDF = ({ patient = null, aiResponse = '' }) => {
 export async function generateLabPDFBlob(text) {
   return new Promise((resolve, reject) => {
     const element = document.createElement('div');
-    element.innerHTML = `<pre style="font-family: Inter, sans-serif; font-size: 12px;">${text}</pre>`;
+    element.innerHTML = `
+      <div style="font-family: 'Inter', sans-serif; padding: 20px; white-space: pre-wrap; font-size: 12px; line-height: 1.6;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <img src="/logo.png" alt="Logo" style="max-width: 150px;" />
+        </div>
+        <pre style="white-space: pre-wrap; font-family: inherit; font-size: inherit; line-height: inherit;">${text}</pre>
+      </div>
+    `;
 
     html2pdf()
       .from(element)
+      .set({
+        margin: 10,
+        filename: `MILO-Guidance-${new Date().toISOString().slice(0, 10)}.pdf`,
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      })
       .outputPdf('blob')
       .then(resolve)
       .catch(reject);
   });
 }
+
