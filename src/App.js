@@ -328,7 +328,7 @@ function validateMILOResponse(text) {
 
     // ✅ Upload PDF and store in Firestore
     if (selectedPatient && Object.keys(extractedLabs).length > 0) {
-      const pdfBlob = await generateLabPDFBlob(aiMessage.text);
+      const pdfBlob = await generateLabPDFBlob(aiMessage.text, selectedPatient);
 
       const fileRef = ref(storage, `labs/${selectedPatient.id}/guidance-${Date.now()}.pdf`);
       await uploadBytes(fileRef, pdfBlob, { contentType: 'application/pdf' });
