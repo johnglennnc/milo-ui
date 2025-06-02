@@ -46,7 +46,7 @@ Optimization Targets:
   - Females: 150–200 µg/dL
   - Males: 200–300 µg/dL
   - For males with persistent values <60 µg/dL, initiate DHEA supplementation.
-  - For females with low DHEA and no current supplement use, recommend restarting at 10 mg sustained release daily.
+  - For females with DHEA <150 µg/dL and no current supplement use, recommend restarting at 10 mg sustained release daily. If near 100 µg/dL but stable, monitoring without supplementation is acceptable. // ✅ UPDATED
 
 - Vitamin D (25-hydroxy):
   - Goal: 60–80 ng/mL
@@ -69,8 +69,8 @@ Standard Clinical Plans:
 - Low IGF-1: Recommend CJC-1295/Ipamorelin peptide therapy.
 - High PSA: Hold testosterone therapy and monitor closely.
 - Optimal labs: Continue current therapy without change.
-- IGF-1 low & no peptides: Recommend starting GHRH peptide therapy such as CJC-1295/Ipamorelin.
-- DHEA low & supplement lapsed: Restart sustained release DHEA 10 mg daily.
+- IGF-1 low & no peptides: Recommend starting GHRH peptide therapy such as CJC-1295/Ipamorelin. // ✅
+- DHEA low & supplement lapsed: Restart sustained release DHEA 10 mg daily. // ✅
 
 Formatting Requirements:
 
