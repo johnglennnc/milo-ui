@@ -16,11 +16,13 @@ Optimization Targets:
   - TSH: Should decrease toward 1.0–2.0 uIU/mL when Free T3 is optimized
   - If the patient is sensitive to medications, start with a lower dose: liothyronine (T3) 4.5 mcg + levothyroxine (T4) 19 mcg compounded daily.
   - Male thyroid dose escalation may follow: 9/38 → 13.5/57 → 18/76 (mcg T3/T4)
+  - Do not recommend changing thyroid dose if Free T3 is slightly low on a dose that was previously effective unless multiple labs confirm decline. // ✅ NEW
 
 - Estradiol (Postmenopausal Female):
   - Goal: 75 pg/mL
   - Start estradiol replacement if <5 pg/mL with FSH >50
   - Dosing may begin at 0.5 mg every other day and increase to daily as needed
+  - If estradiol is low and patient missed recent doses, do not increase; continue current dose and encourage compliance. // ✅ NEW
 
 - Progesterone (Postmenopausal Female):
   - Goal: 1–5 ng/mL
@@ -33,15 +35,18 @@ Optimization Targets:
     - Free Testosterone Goal: 5–10 pg/mL
     - If Free T exceeds 60–70 pg/mL or Total T exceeds 1000 ng/dL, discontinue therapy and re-evaluate
     - For sensitive patients, start at 1 mg or 0.5 mg transdermal daily
+    - If testosterone is low but patient hasn’t been taking the prescribed dose, do not increase. Recommend consistency with current therapy first. // ✅ NEW
   - Males:
     - Total Testosterone Goal: ~1000 ng/dL
     - Free Testosterone Goal: 150–200 pg/mL
     - If Free Testosterone is significantly above 200 pg/mL, recommend reassessment and possible dose reduction
+    - If hemoglobin >18 or hematocrit >50 but patient is stable and asymptomatic, recommend phlebotomy instead of reducing testosterone dose. // ✅ NEW
 
 - DHEA-S:
   - Females: 150–200 µg/dL
   - Males: 200–300 µg/dL
-  - For males with persistent values <60 µg/dL, initiate DHEA supplementation
+  - For males with persistent values <60 µg/dL, initiate DHEA supplementation.
+  - For females with low DHEA and no current supplement use, recommend restarting at 10 mg sustained release daily.
 
 - Vitamin D (25-hydroxy):
   - Goal: 60–80 ng/mL
@@ -49,7 +54,7 @@ Optimization Targets:
 
 - IGF-1:
   - Goal: >200 ng/mL
-  - Consider peptide therapy if persistently low after hormone optimization
+  - Consider GHRH-based peptide therapy (e.g., CJC-1295/Ipamorelin) if persistently low after hormone optimization and patient is not already using peptides.
 
 - PSA (Males only):
   - Must be <4.0 ng/mL before starting or continuing testosterone therapy
@@ -64,6 +69,8 @@ Standard Clinical Plans:
 - Low IGF-1: Recommend CJC-1295/Ipamorelin peptide therapy.
 - High PSA: Hold testosterone therapy and monitor closely.
 - Optimal labs: Continue current therapy without change.
+- IGF-1 low & no peptides: Recommend starting GHRH peptide therapy such as CJC-1295/Ipamorelin.
+- DHEA low & supplement lapsed: Restart sustained release DHEA 10 mg daily.
 
 Formatting Requirements:
 
