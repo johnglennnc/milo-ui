@@ -10,16 +10,59 @@ const formatDate = (isoString) => {
 };
 
 export function applyFormattingToText(rawText) {
-  // same body, no changes needed
+  // Split raw text into lines
+  const lines = rawText.split('\n');
+  let formattedText = '';
+  let currentCategory = '';
+  let inSummary = false;
 
-  return rawText
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Convert markdown bold to HTML
-    .replace(/(<strong>Clinical Plan<\/strong>)/g, '<br/><br/>$1') // Add spacing before Clinical Plan
-    .replace(
-      /(<strong>Clinical Plan<\/strong>[\s\S]*?)(?=\n<strong>|$)/g,
-      (match) =>
-        `<div style="page-break-inside: avoid;">${match}<hr style="border:none;border-top:1px solid #ccc;margin:16px 0;" /></div>`
-    );
+  lines.forEach((line) => {
+    line = line.trim();
+    if (!line) return;
+
+    // Detect category (e.g., Thyroid, Testosterone)
+    if (line.match(/^[A-Za-z\s]+$/)) {
+      currentCategory = line;
+      formattedText += `<h2 style="font-size: 14px; margin: 10px 0;">${line}</h2>`;
+      return;
+    }
+
+    // Detect Plan Summary
+    if (line.startsWith('Plan Summary')) {
+      inSummary = true;
+      formattedText += `<h2 style="font-size: 14px; margin: 10px 0;">Plan Summary</h2>`;
+      return;
+    }
+
+    if (inSummary) {
+      // Format summary items as bullets
+      if (line.startsWith('-')) {
+        formattedText += `<p style="margin: 5px 0;">${line}</p>`;
+      }
+      return;
+    }
+
+    // Format marker entries (e.g., Testosterone, Free: 96.2 pg/mL)
+    const markerMatch = line.match(/^([^\:]+):\s*([^\→]+)\→\s*([^\→]+)\→\s*Clinical Plan:\s*(.+)$/);
+    if (markerMatch) {
+      const [, marker, value, interpretation, plan] = markerMatch;
+      formattedText += `
+        <div style="page-break-inside: avoid; margin-bottom: 10px;">
+          <p style="margin: 0;"><strong>${marker.trim()}</strong>: ${value.trim()}</p>
+          <p style="margin: 2px 0 2px 10px;">→ ${interpretation.trim()}</p>
+          <p style="margin: 2px 0 2px 10px;">→ Clinical Plan: ${plan.trim()}</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Add horizontal line after category if not in summary
+    if (currentCategory && !inSummary && formattedText.endsWith('</div>\n')) {
+      formattedText += `<hr style="border: none; border-top: 1px solid #000; margin: 10px 0;" />`;
+    }
+  });
+
+  return formattedText;
 }
 
 export const generateLabPDF = ({ patient = null, aiResponse = '' }) => {
@@ -29,7 +72,7 @@ export const generateLabPDF = ({ patient = null, aiResponse = '' }) => {
   const header = patient ? `
     <p style="margin: 0 0 6px 0;"><strong>Patient Name:</strong> ${patient.name || 'N/A'}</p>
     <p style="margin: 0 0 6px 0;"><strong>Date of Birth:</strong> ${dobFormatted}</p>
-    <p style="margin: 0 20px 20px 0;"><strong>Report Date:</strong> ${todayFormatted}</p>
+    <p style="margin: 0 0 20px 0;"><strong>Report Date:</strong> ${todayFormatted}</p>
   ` : '';
 
   const cleanText = applyFormattingToText(aiResponse);
@@ -43,7 +86,7 @@ export const generateLabPDF = ({ patient = null, aiResponse = '' }) => {
     </div>
   `;
 
-    const generate = () => {
+  const generate = () => {
     setTimeout(() => {
       html2pdf()
         .from(element)
@@ -61,7 +104,7 @@ export const generateLabPDF = ({ patient = null, aiResponse = '' }) => {
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         })
         .save();
-    }, 200); // slight delay for layout stabilization
+    }, 200); // Slight delay for layout stabilization
   };
 
   const logo = element.querySelector('img');
