@@ -10,18 +10,15 @@ const formatDate = (isoString) => {
 };
 
 export function applyFormattingToText(rawText) {
-  if (!rawText || typeof rawText !== 'string') {
-    console.error('Invalid aiResponse:', rawText);
-    return '<p>Error: Invalid lab data received.</p>';
-  }
+  // same body, no changes needed
 
   return rawText
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Convert markdown bold to HTML
     .replace(/(<strong>Clinical Plan<\/strong>)/g, '<br/><br/>$1') // Add spacing before Clinical Plan
     .replace(
-      /(<strong>[^<]+<\/strong>:\s*[^→]+→\s*[^→]+→\s*<strong>Clinical Plan<\/strong>[^<]+)/g,
+      /(<strong>Clinical Plan<\/strong>[\s\S]*?)(?=\n<strong>|$)/g,
       (match) =>
-        `<div style="page-break-inside: avoid;">${match}<hr style="border: none; border-top: 2px solid #000; margin: 16px 0;" /></div>`
+        `<div style="page-break-inside: avoid;">${match}<hr style="border:none;border-top:1px solid #ccc;margin:16px 0;" /></div>`
     );
 }
 
@@ -46,7 +43,7 @@ export const generateLabPDF = ({ patient = null, aiResponse = '' }) => {
     </div>
   `;
 
-  const generate = () => {
+    const generate = () => {
     setTimeout(() => {
       html2pdf()
         .from(element)
@@ -63,11 +60,8 @@ export const generateLabPDF = ({ patient = null, aiResponse = '' }) => {
           html2canvas: { scale: 2 },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         })
-        .save()
-        .catch((error) => {
-          console.error('PDF generation error:', error);
-        });
-    }, 200);
+        .save();
+    }, 200); // slight delay for layout stabilization
   };
 
   const logo = element.querySelector('img');
