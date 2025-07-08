@@ -1,71 +1,58 @@
-// /api/milo.js
+// /api/milo.js  – PAGES API ROUTE STYLE (Node runtime)
 
-// ✅ Use Node.js instead of Edge — avoids 10s timeout
+/* Tell Vercel to run this as a Node.js Serverless Function */
 export const config = {
   runtime: 'nodejs',
-  maxDuration: 60, // 60 seconds allowed
+  maxDuration: 60,   // up to 60 s total, first byte by 25 s
 };
 
-export default async function handler(req) {
+export default async function handler(req, res) {
+  /* Accept only POST */
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-    });
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const { model, messages, temperature } = await req.json();
+    /* ✅ Body is already parsed by Next.js → use req.body */
+    const { model, messages, temperature } = req.body;
 
-    // ✅ Check for required environment variable
     if (!process.env.OPENAI_API_KEY) {
-      console.error("❌ Missing OpenAI API Key");
-      return new Response(JSON.stringify({ error: 'Missing OpenAI API Key' }), {
-        status: 500,
-      });
+      console.error('❌ Missing OpenAI API Key');
+      return res.status(500).json({ error: 'Missing OpenAI API Key' });
     }
 
-    // ✅ Validate request body
     if (!model || !messages) {
-      return new Response(JSON.stringify({ error: 'Missing model or messages.' }), {
-        status: 400,
-      });
+      return res.status(400).json({ error: 'Missing model or messages.' });
     }
 
-    // ✅ Make request to OpenAI
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    /* Call OpenAI */
+    const oaRes = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
         model,
         messages,
-        temperature: temperature || 0.2,
+        temperature: temperature ?? 0.2,
       }),
     });
 
-    // ✅ Handle OpenAI response errors
-    if (!openaiResponse.ok) {
-      const errorData = await openaiResponse.text();
-      console.error('❌ OpenAI API error:', errorData);
-      return new Response(JSON.stringify({ error: errorData }), {
-        status: openaiResponse.status,
-      });
+    if (!oaRes.ok) {
+      const errText = await oaRes.text();
+      console.error('❌ OpenAI API error:', errText);
+      return res.status(oaRes.status).json({ error: errText });
     }
 
-    // ✅ Parse and return result immediately (no delays)
-    const data = await openaiResponse.json();
-    const reply = data.choices?.[0]?.message?.content || "No response generated.";
+    const data  = await oaRes.json();
+    const reply = data.choices?.[0]?.message?.content || 'No response generated.';
 
-    return new Response(JSON.stringify({ message: reply }), {
-      status: 200,
-    });
+    /* ✅ Send reply immediately */
+    return res.status(200).json({ message: reply });
 
-  } catch (error) {
-    console.error('❌ Error contacting OpenAI:', error.message || error);
-    return new Response(JSON.stringify({ error: 'Internal server error.' }), {
-      status: 500,
-    });
+  } catch (err) {
+    console.error('❌ Server error in /api/milo:', err.message || err);
+    return res.status(500).json({ error: 'Internal server error.' });
   }
 }
