@@ -10,7 +10,6 @@ const formatDate = (isoString) => {
 };
 
 export function applyFormattingToText(rawText) {
-  // Split raw text into lines
   const lines = rawText.split('\n');
   let formattedText = '';
   let currentCategory = '';
@@ -23,7 +22,7 @@ export function applyFormattingToText(rawText) {
     // Detect category (e.g., Thyroid, Testosterone)
     if (line.match(/^[A-Za-z\s]+$/)) {
       currentCategory = line;
-      formattedText += `<h2 style="font-size: 14px; margin: 10px 0;">${line}</h2>`;
+      formattedText += `<h2 style="font-size: 14px; margin: 10px 0;">${currentCategory}</h2>`;
       return;
     }
 
@@ -34,15 +33,16 @@ export function applyFormattingToText(rawText) {
       return;
     }
 
-    if (inSummary) {
-      // Format summary items as bullets
-      if (line.startsWith('-')) {
-        formattedText += `<p style="margin: 5px 0;">${line}</p>`;
-      }
+    // Format summary items as bullets
+    if (inSummary && line.startsWith('-')) {
+      formattedText += `<p style="margin: 5px 0;">${line}</p>`;
       return;
     }
 
-    // Format marker entries (e.g., Testosterone, Free: 96.2 pg/mL)
+    // Remove markdown bold (**)
+    line = line.replace(/\*\*(.*?)\*\*/g, '$1');
+
+    // Format marker entries
     const markerMatch = line.match(/^([^\:]+):\s*([^\→]+)\→\s*([^\→]+)\→\s*Clinical Plan:\s*(.+)$/);
     if (markerMatch) {
       const [, marker, value, interpretation, plan] = markerMatch;
@@ -51,14 +51,9 @@ export function applyFormattingToText(rawText) {
           <p style="margin: 0;"><strong>${marker.trim()}</strong>: ${value.trim()}</p>
           <p style="margin: 2px 0 2px 10px;">→ ${interpretation.trim()}</p>
           <p style="margin: 2px 0 2px 10px;">→ Clinical Plan: ${plan.trim()}</p>
+          <hr style="border: none; border-top: 2px solid #000; margin: 10px 0;" />
         </div>
       `;
-      return;
-    }
-
-    // Add horizontal line after category if not in summary
-    if (currentCategory && !inSummary && formattedText.endsWith('</div>\n')) {
-      formattedText += `<hr style="border: none; border-top: 1px solid #000; margin: 10px 0;" />`;
     }
   });
 
@@ -104,7 +99,7 @@ export const generateLabPDF = ({ patient = null, aiResponse = '' }) => {
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         })
         .save();
-    }, 200); // Slight delay for layout stabilization
+    }, 200); // slight delay for layout stabilization
   };
 
   const logo = element.querySelector('img');
