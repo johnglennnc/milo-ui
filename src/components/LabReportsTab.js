@@ -1,7 +1,7 @@
 // src/components/LabReportsTab.js
 import { useState, useEffect } from "react";
 import openai from "../utils/openaiClient";
-import { db, storage } from "../firebase";
+import { db, storage, saveLabResult } from "../firebase"; // Added saveLabResult here
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import {
   collection,
@@ -61,7 +61,7 @@ export default function LabReportsTab({ patientId, user }) {
         chatThread: [],
       });
       
-      await saveLabResult(patientId, { rawText: parsedText });
+      await saveLabResult(patientId, { rawText: parsedText }); // This should now work with the import
 
       console.log("✅ Successfully created labReports doc:", docRef.id);
   
@@ -110,12 +110,12 @@ export default function LabReportsTab({ patientId, user }) {
   }, [selectedReport?.id]);
 
   const handleSend = async () => {
-  if (!message || !selectedReport) return;
+    if (!message || !selectedReport) return;
 
-  const reportRef = doc(db, "labReports", selectedReport.id);
-  const updatedChat = [...chat, { sender: "user", message }];
+    const reportRef = doc(db, "labReports", selectedReport.id);
+    const updatedChat = [...chat, { sender: "user", message }];
 
-  const refinedPrompt = `
+    const refinedPrompt = `
 You are a clinical assistant trained in the hormone optimization style of Dr. Eric Kephart. You are reviewing lab results for a female patient. Your goal is to convert raw lab values into a structured report, grouped by system, with interpretation and clinical recommendations for every single value listed.
 
 You MUST follow this output format. Do not change it.
@@ -153,69 +153,68 @@ Plan Summary:
 Respond ONLY in this format.
 `;
 
-  const labText = selectedReport.parsedText;
+    const labText = selectedReport.parsedText;
 
-  try {
-    console.log("📤 SENDING TO OPENAI", {
-  prompt: refinedPrompt,
-  labText,
-});
+    try {
+      console.log("📤 SENDING TO OPENAI", {
+        prompt: refinedPrompt,
+        labText,
+      });
 
-console.log("🧾 Characters in request:", refinedPrompt.length + labText.length);
+      console.log("🧾 Characters in request:", refinedPrompt.length + labText.length);
 
-  console.log("📤 Sending to OpenAI:", {
-  model: "ft:gpt-3.5-turbo-0125:the-bad-company-holdings-llc::BKB3w2h2",
-  messages: [
-    { role: "system", content: refinedPrompt },
-    { role: "user", content: labText }
-  ]
-});
+      console.log("📤 Sending to OpenAI:", {
+        model: "ft:gpt-3.5-turbo-0125:the-bad-company-holdings-llc::BKB3w2h2",
+        messages: [
+          { role: "system", content: refinedPrompt },
+          { role: "user", content: labText }
+        ]
+      });
  
-const response = await fetch('/api/openaiProxy', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    model: "ft:gpt-3.5-turbo-0125:the-bad-company-holdings-llc::BKB3w2h2",
-    messages: [
-      { role: "system", content: refinedPrompt },
-      { role: "user", content: labText },
-    ],
-  }),
-});
+      const response = await fetch('/api/openaiProxy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: "ft:gpt-3.5-turbo-0125:the-bad-company-holdings-llc::BKB3w2h2",
+          messages: [
+            { role: "system", content: refinedPrompt },
+            { role: "user", content: labText },
+          ],
+        }),
+      });
 
-const data = await response.json();
-const aiReply = {
-  sender: "MILO",
-  message: data.result,
-};
-    console.log("🤖 MILO RESPONSE:", response.choices[0].message.content);
+      const data = await response.json();
+      const aiReply = {
+        sender: "MILO",
+        message: data.result,
+      };
+      console.log("🤖 MILO RESPONSE:", response.choices[0].message.content);
 
+      const fullChat = [...updatedChat, aiReply];
 
-    const fullChat = [...updatedChat, aiReply];
+      await updateDoc(reportRef, {
+        chatThread: arrayUnion(...fullChat.slice(chat.length)),
+      });
 
-    await updateDoc(reportRef, {
-      chatThread: arrayUnion(...fullChat.slice(chat.length)),
-    });
+      setChat(fullChat);
+      setMessage("");
 
-    setChat(fullChat);
-    setMessage("");
-
-  } catch (error) {
-    console.error("❌ OpenAI API error:", error);
-    const errorReply = {
-      sender: "MILO",
-      message: "I'm having trouble processing the lab report right now. Please try again later.",
-    };
-    const fullChat = [...updatedChat, errorReply];
-    await updateDoc(reportRef, {
-      chatThread: arrayUnion(...fullChat.slice(chat.length)),
-    });
-    setChat(fullChat);
-    setMessage("");
-  }
-};
+    } catch (error) {
+      console.error("❌ OpenAI API error:", error);
+      const errorReply = {
+        sender: "MILO",
+        message: "I'm having trouble processing the lab report right now. Please try again later.",
+      };
+      const fullChat = [...updatedChat, errorReply];
+      await updateDoc(reportRef, {
+        chatThread: arrayUnion(...fullChat.slice(chat.length)),
+      });
+      setChat(fullChat);
+      setMessage("");
+    }
+  };
 
   return (
     <div className="p-4 space-y-6">
@@ -254,8 +253,8 @@ const aiReply = {
             <h2 className="text-xl font-semibold">Report Details</h2>
             <Card>
               <CardContent className="max-h-60 overflow-y-auto whitespace-pre-wrap text-sm text-white">
- <pre>{selectedReport.parsedText}</pre>
-</CardContent>
+                <pre>{selectedReport.parsedText}</pre>
+              </CardContent>
             </Card>
 
             <PatientHistory patientId={patientId} />
