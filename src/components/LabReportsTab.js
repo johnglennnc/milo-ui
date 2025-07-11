@@ -60,7 +60,9 @@ export default function LabReportsTab({ patientId, user }) {
         createdAt: new Date(),
         chatThread: [],
       });
-  
+      
+      await saveLabResult(patientId, { rawText: parsedText });
+
       console.log("✅ Successfully created labReports doc:", docRef.id);
   
       setSelectedReport({
