@@ -369,6 +369,7 @@ function validateMILOResponse(text) {
       await updateDoc(doc(db, 'patients', selectedPatient.id), {
         labs: arrayUnion(labEntry)
       });
+      await saveLabResult(selectedPatient.id, labEntry.values || {});
 
       setSelectedPatient(prev => ({
         ...prev,

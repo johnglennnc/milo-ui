@@ -1,5 +1,4 @@
 // src/components/LabReportsTab.js
-
 import { useState, useEffect } from "react";
 import openai from "../utils/openaiClient";
 import { db, storage } from "../firebase";
@@ -19,7 +18,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
-import PatientHistory from './PatientHistory'; // Add this
+import PatientHistory from './PatientHistory';
 
 export default function LabReportsTab({ patientId, user }) {
   const [file, setFile] = useState(null);
@@ -257,7 +256,7 @@ const aiReply = {
 </CardContent>
             </Card>
 
-            <PatientHistory clinicId="msm" patientId={patientId} />
+            <PatientHistory patientId={patientId} />
 
             <div className="space-y-2">
               <h3 className="text-lg font-medium">Follow-Up Chat</h3>

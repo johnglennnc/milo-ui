@@ -1,12 +1,13 @@
+// src/components/PatientHistory.jsx
 import React, { useState, useEffect } from 'react';
 import { getPatientHistory } from '../firebase';
 
-const PatientHistory = ({ clinicId, patientId }) => {
+const PatientHistory = ({ patientId }) => {
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
-    getPatientHistory(clinicId, patientId).then(setHistory);
-  }, [clinicId, patientId]);
+    getPatientHistory(patientId).then(setHistory);
+  }, [patientId]);
 
   return (
     <div className="p-4">

@@ -1,3 +1,4 @@
+// src/firebase.js
 import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
@@ -30,3 +31,35 @@ setPersistence(auth, browserLocalPersistence)
 
 export { auth };
 
+// Save lab result to patient history
+export const saveLabResult = async (patientId, labData) => {
+  try {
+    await db
+      .collection('patients')
+      .doc(patientId)
+      .collection('labHistory')
+      .add({
+        ...labData,
+        date: new Date().toISOString(),
+      });
+    console.log('Lab result saved');
+  } catch (error) {
+    console.error('Error saving lab result:', error);
+  }
+};
+
+// Fetch patient lab history
+export const getPatientHistory = async (patientId) => {
+  try {
+    const snapshot = await db
+      .collection('patients')
+      .doc(patientId)
+      .collection('labHistory')
+      .orderBy('date', 'desc')
+      .get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error('Error fetching history:', error);
+    return [];
+  }
+};
