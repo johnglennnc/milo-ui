@@ -1,6 +1,7 @@
 // src/components/LabReportsTab.js
 import { useState, useEffect } from "react";
 import openai from "../utils/openaiClient";
+import { extractLabValues } from "../utils/labParser";
 import { db, storage, saveLabResult } from "../firebase"; // Added saveLabResult here
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import {
@@ -39,6 +40,8 @@ export default function LabReportsTab({ patientId, user }) {
       const url = await getDownloadURL(storageRef);
   
       let parsedText = "";
+      const labValues = extractLabValues(parsedText);
+await saveLabResult(patientId, labValues);
       if (file.type === "application/pdf") {
         parsedText = await extractTextFromPDF(file);
       } else {
