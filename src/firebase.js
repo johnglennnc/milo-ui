@@ -8,7 +8,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyA0MLx37A85YFNu3S6-RDTB2kO6nQvHXhA",
   authDomain: "milo-sandbox-92c4a.firebaseapp.com",
   projectId: "milo-sandbox-92c4a",
-  storageBucket: "milo-sandbox-92c4a.appspot.com",
+  storageBucket: "milo-sandbox-92c4a.firebasestorage.app",
   messagingSenderId: "480638447868",
   appId: "1:480638447868:web:500bceedac79ae61526779"
 };
