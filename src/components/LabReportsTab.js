@@ -1,3 +1,5 @@
+// src/components/LabReportsTab.js
+
 import { useState, useEffect } from "react";
 import openai from "../utils/openaiClient";
 import { db, storage } from "../firebase";
@@ -17,6 +19,7 @@ import { Card, CardContent } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
+import PatientHistory from './PatientHistory'; // Add this
 
 export default function LabReportsTab({ patientId, user }) {
   const [file, setFile] = useState(null);
@@ -143,6 +146,7 @@ Plan Summary:
 - Start E2 capsule
 - Increase progesterone
 - Raise Vitamin D to 10k IU/day
+
 ---
 
 Respond ONLY in this format.
@@ -249,9 +253,11 @@ const aiReply = {
             <h2 className="text-xl font-semibold">Report Details</h2>
             <Card>
               <CardContent className="max-h-60 overflow-y-auto whitespace-pre-wrap text-sm text-white">
-  <pre>{selectedReport.parsedText}</pre>
+ <pre>{selectedReport.parsedText}</pre>
 </CardContent>
             </Card>
+
+            <PatientHistory clinicId="msm" patientId={patientId} />
 
             <div className="space-y-2">
               <h3 className="text-lg font-medium">Follow-Up Chat</h3>
