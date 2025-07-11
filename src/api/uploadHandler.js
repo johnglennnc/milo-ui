@@ -1,7 +1,7 @@
 // src/api/uploadHandler.js
 import { db } from '../firebase';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
-import { saveLabResult } from '../firebase'; // Add this import
+import { saveLabResult } from '../firebase';
 import { extractLabValues } from '../utils/labParser';
 
 export default async function handler(req, res) {
@@ -30,9 +30,7 @@ export default async function handler(req, res) {
       labs: arrayUnion(labEntry)
     });
 
-    // Add to history
-    const clinicId = 'msm'; // Replace with your clinic ID logic
-    await saveLabResult(clinicId, patientId, labEntry.values || {});
+    await saveLabResult(patientId, labEntry.values || {});
 
     res.status(200).json({ success: true });
   } catch (err) {
