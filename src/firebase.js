@@ -1,6 +1,6 @@
 // src/firebase.js
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, updateDoc, addDoc, collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
 
@@ -20,7 +20,7 @@ export const storage = getStorage(app);
 
 const auth = getAuth(app);
 
-// 🔥 Set persistence immediately after creating auth
+// ✅ Set auth persistence to local storage
 setPersistence(auth, browserLocalPersistence)
   .then(() => {
     console.log("✅ Auth persistence set to localStorage.");
@@ -31,35 +31,34 @@ setPersistence(auth, browserLocalPersistence)
 
 export { auth };
 
-// Save lab result to patient history
+
+// ✅ Save a lab result to /patients/{patientId}/labHistory subcollection
 export const saveLabResult = async (patientId, labData) => {
   try {
-    await db
-      .collection('patients')
-      .doc(patientId)
-      .collection('labHistory')
-      .add({
-        ...labData,
-        date: new Date().toISOString(),
-      });
-    console.log('Lab result saved');
+    const labRef = collection(db, 'patients', patientId, 'labHistory');
+    await addDoc(labRef, {
+      ...labData,
+      date: new Date().toISOString()
+    });
+    console.log('✅ Lab result saved to subcollection.');
   } catch (error) {
-    console.error('Error saving lab result:', error);
+    console.error('❌ Error saving lab result:', error);
   }
 };
 
-// Fetch patient lab history
+
+// ✅ Get full patient lab history from /patients/{patientId}/labs array
 export const getPatientHistory = async (patientId) => {
   try {
-    const snapshot = await db
-      .collection('patients')
-      .doc(patientId)
-      .collection('labHistory')
-      .orderBy('date', 'desc')
-      .get();
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const docRef = doc(db, 'patients', patientId);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) return [];
+
+    const data = docSnap.data();
+    return data.labs || [];
   } catch (error) {
-    console.error('Error fetching history:', error);
+    console.error('❌ Error fetching patient history:', error);
     return [];
   }
 };
