@@ -316,7 +316,7 @@ function validateMILOResponse(text) {
   const systemPrompt = buildSystemPrompt(selectedPatient?.name);
 
   const history = await getPatientHistory(selectedPatient.id);
-  const historyText = history.map(h => `Date: ${h.date}\nValues: ${JSON.stringify(h)}`).join('\n\n');
+  const historyText = history.map(h => `Date: ${h.date}\n` + Object.entries(h).map(([key, value]) => `${key}: ${value}`).join('\n')).join('\n\n');
   const combinedPrompt = historyText ? `${historyText}\n\nNEW LAB: ${textToSend}` : textToSend;
 
   try {
