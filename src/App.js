@@ -8,7 +8,8 @@ import { buildSystemPrompt } from './utils/miloPrompt';
 import { extractTextFromImagePDF } from './utils/ocrReader';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from './firebase';
-import { getPatientHistory, saveLabResult } from './firebase';
+import { getPatientHistory } from './firebase';
+import { saveLabResult } from './firebase'; // Add at top
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from './firebase';
 import {
@@ -26,7 +27,6 @@ import {
   where
 } from 'firebase/firestore';
 import { extractTextHybrid } from './utils/hybridReader';
-
 const testStorageUpload = async () => {
   const testBlob = new Blob(["This is a test file"], { type: 'text/plain' });
   const testRef = ref(storage, 'test-folder/test-file.txt');
