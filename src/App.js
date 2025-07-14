@@ -9,6 +9,7 @@ import { extractTextFromImagePDF } from './utils/ocrReader';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from './firebase';
 import { getPatientHistory } from './firebase';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { saveLabResult } from './firebase'; // Add at top
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from './firebase';
@@ -692,6 +693,20 @@ const handleSignUp = async (e) => {
   } catch (err) {
     console.error("🔥 Signup error:", err.code, err.message);
     alert("Signup failed: " + err.message);
+  }
+};
+const handlePasswordReset = async () => {
+  if (!loginUsername.trim()) {
+    alert('Please enter your email in the email field first.');
+    return;
+  }
+
+  try {
+    await sendPasswordResetEmail(auth, loginUsername.trim());
+    alert('✅ Password reset email sent. Check your inbox.');
+  } catch (err) {
+    console.error('❌ Password reset failed:', err);
+    alert('Failed to send reset email. Make sure the email is correct.');
   }
 };
 
