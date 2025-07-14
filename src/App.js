@@ -323,7 +323,7 @@ function validateMILOResponse(text) {
           role: m.sender === 'user' ? 'user' : 'assistant',
           content: m.text
         })),
-        { role: 'user', content: textToSend.trim() }
+        { role: 'user', content: combinedPrompt }
       ],
       temperature: 0.2
     };
@@ -498,6 +498,12 @@ const handleRunMILO = async () => {
 
     // 🧼 Clean the input before sending to OpenAI
     const cleaned = cleanLabText(combined);
+    // In App.js sendMessage
+const history = await getPatientHistory(selectedPatient.id);
+const historyText = history.map(h => `Date: ${h.date}\nValues: ${JSON.stringify(h)}`).join('\n\n');
+const combinedPrompt = historyText ? `${historyText}\n\nNEW LAB: ${textToSend}` : textToSend;
+
+// Then use combinedPrompt in messages
 
     // 🔍 Debug info
     console.log("🧼 Cleaned MILO input preview:", cleaned.slice(0, 500));
