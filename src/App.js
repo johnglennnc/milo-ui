@@ -190,6 +190,7 @@ function App() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [newPatientName, setNewPatientName] = useState('');
   const [newPatientDOB, setNewPatientDOB] = useState('');
+  const [newPatientGender, setNewPatientGender] = useState('male');
   const [searchTerm, setSearchTerm] = useState('');
   const [input, setInput] = useState('');
   const [multiFiles, setMultiFiles] = useState([]);
@@ -214,6 +215,7 @@ const handleCreatePatient = async () => {
     await addDoc(collection(db, 'patients'), {
       name: newPatientName,
       dob: newPatientDOB,
+      gender: newPatientGender,
       teamId: userInfo?.teamId || 'unknown',
       createdAt: new Date().toISOString()
     });
@@ -313,7 +315,7 @@ function validateMILOResponse(text) {
 
   const mentioned = extractMentionedHormones(textToSend);
   const hormoneHeader = (h) => mentioned.has(h) ? `- **${h}**: Include if present.` : '';
-  const systemPrompt = buildSystemPrompt(selectedPatient?.name);
+  const systemPrompt = buildSystemPrompt(selectedPatient?.name, selectedPatient?.gender || 'unspecified');
 
   const history = await getPatientHistory(selectedPatient.id);
   const historyText = history.map(h => `Date: ${h.date}\n` + Object.entries(h).map(([key, value]) => `${key}: ${value}`).join('\n')).join('\n\n');
@@ -553,6 +555,7 @@ const handleOCRReprocess = async (index) => {
     id: docRef.id,
     name: newPatientName.trim(),
     dob: newPatientDOB.trim(),
+    gender: newPatientGender,
     labs: [],
     teamId: userInfo.teamId
   };
@@ -860,6 +863,15 @@ const handleSignUp = async (e) => {
         value={newPatientDOB}
         onChange={(e) => setNewPatientDOB(e.target.value)}
       />
+      <select
+  className="block w-full md:w-1/2 border p-2 rounded bg-gray-900 border-gray-600 text-white mb-2"
+  value={newPatientGender}
+  onChange={(e) => setNewPatientGender(e.target.value)}
+>
+  <option value="male">Male</option>
+  <option value="female">Female</option>
+</select>
+
       <div className="flex gap-2">
         <button
           onClick={handleCreatePatient}
