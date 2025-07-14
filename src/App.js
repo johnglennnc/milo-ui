@@ -746,12 +746,12 @@ const handlePasswordReset = async () => {
 
   <div className="text-right mb-6">
     <button
-      type="button"
-      onClick={() => alert('Please contact your administrator to reset your password.')}
-      className="text-sm text-blue-400 hover:text-blue-600 underline"
-    >
-      Forgot Password?
-    </button>
+  type="button"
+  onClick={handlePasswordReset}
+  className="text-sm text-blue-400 hover:text-blue-600 underline"
+>
+  Forgot Password?
+</button>
   </div>
 
   <button
