@@ -1103,6 +1103,12 @@ setVisiblePreviews(prev => ({ ...prev, ...newInputPreviews }));
     {!selectedPatient ? (
       <>
         <p className="text-sm text-gray-400 mb-4">Loaded {patients.length} patients</p>
+        <button
+  onClick={() => setPatientMode('create') || setActiveTab('lab')}
+  className="mb-4 text-sm text-blue-400 hover:underline"
+>
+  + New Patient
+</button>
         <input
           type="text"
           placeholder="Search patients..."
@@ -1151,22 +1157,47 @@ setVisiblePreviews(prev => ({ ...prev, ...newInputPreviews }));
         <h4 className="text-lg font-semibold mb-2">Uploaded Lab Reports:</h4>
         {selectedPatient.labs?.length ? (
           <ul className="list-disc ml-6 space-y-1 text-sm">
-            {selectedPatient.labs.map((lab, idx) => {
-  console.log("🔥 Lab file URL:", lab.fileUrl); // <= Add this
+            {selectedPatient.labs.map((lab, idx) => (
+  <li key={idx} className="flex justify-between items-center">
+    <a
+      href={lab.fileUrl}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-blue-400 hover:underline"
+    >
+      📄 {lab.date}
+    </a>
+    <button
+      onClick={async () => {
+        const confirmed = confirm('Are you sure you want to delete this lab entry? This cannot be undone.');
+        if (!confirmed) return;
 
-  return (
-    <li key={idx}>
-      <a
-        href={lab.fileUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-blue-400 hover:underline"
-      >
-        📄 {lab.date}
-      </a>
-    </li>
-  );
-})}
+        try {
+          const docRef = doc(db, 'patients', selectedPatient.id);
+          const updatedLabs = (selectedPatient.labs || []).filter((_, i) => i !== idx);
+
+          await updateDoc(docRef, {
+            labs: updatedLabs
+          });
+
+          setSelectedPatient(prev => ({
+            ...prev,
+            labs: updatedLabs
+          }));
+
+          alert('Lab entry deleted.');
+        } catch (err) {
+          console.error('❌ Failed to delete lab:', err);
+          alert('Failed to delete lab entry. See console for details.');
+        }
+      }}
+      className="text-red-400 text-xs ml-4 hover:underline"
+    >
+      Delete
+    </button>
+  </li>
+))}
+
           </ul>
         ) : (
           <p className="text-sm text-gray-400">No lab uploads yet.</p>
