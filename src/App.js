@@ -678,10 +678,13 @@ const handleSignUp = async (e) => {
     const userCredential = await createUserWithEmailAndPassword(auth, loginUsername, loginPassword);
     const uid = userCredential.user.uid;
     await setDoc(doc(db, 'users', uid), {
-      role: 'doctor',
-      teamId: `team_${loginUsername.split('@')[0]}`,
-      name: loginUsername.split('@')[0]
-    });
+  name: loginUsername.split('@')[0],
+  role: 'doctor',
+  teamId: signupTeamCode.trim()
+    ? `team_${signupTeamCode.trim().toLowerCase()}`
+    : `team_${loginUsername.split('@')[0]}`,
+  email: loginUsername.trim() // ✅ Add this line
+});
     setUserInfo({
       uid,
       role: 'doctor',
