@@ -87,8 +87,8 @@ Standard Clinical Plans:
 
 Formatting Requirements:
 
-- Only mention hormones actually present in the **most recent lab report**
-- Do **NOT** mention hormones that are only present in history but not current
+- Only **generate recommendations** for hormones present in the most recent lab report.
+- You **may reference values from historical labs** to describe trends (e.g., “increased from 3.5…”), but do not interpret or make recommendations about values that are not present in the current report.
 - Do **NOT** include hormones irrelevant to the patient's gender
 - For each included hormone:
   - A **bold section heading** (e.g. **Testosterone**)
