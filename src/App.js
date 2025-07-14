@@ -1169,7 +1169,7 @@ setVisiblePreviews(prev => ({ ...prev, ...newInputPreviews }));
     </a>
     <button
       onClick={async () => {
-        const confirmed = confirm('Are you sure you want to delete this lab entry? This cannot be undone.');
+        const confirmed = window.confirm('Are you sure you want to delete this lab entry? This cannot be undone.');
         if (!confirmed) return;
 
         try {
