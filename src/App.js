@@ -9,7 +9,7 @@ import { extractTextFromImagePDF } from './utils/ocrReader';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from './firebase';
 import { getPatientHistory } from './firebase';
-import { saveLabResult } from './firebase'; // Add at top
+import { saveLabResult } from './firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from './firebase';
 import {
@@ -27,6 +27,7 @@ import {
   where
 } from 'firebase/firestore';
 import { extractTextHybrid } from './utils/hybridReader';
+
 const testStorageUpload = async () => {
   const testBlob = new Blob(["This is a test file"], { type: 'text/plain' });
   const testRef = ref(storage, 'test-folder/test-file.txt');
@@ -315,9 +316,6 @@ function validateMILOResponse(text) {
   const hormoneHeader = (h) => mentioned.has(h) ? `- **${h}**: Include if present.` : '';
   const systemPrompt = buildSystemPrompt(selectedPatient?.name);
 
-  const history = await getPatientHistory(selectedPatient.id);
-const historyText = history.map(h => `Date: ${h.date}\nValues: ${JSON.stringify(h)}`).join('\n\n');
-const combinedPrompt = historyText ? `${historyText}\n\nNEW LAB: ${textToSend}` : textToSend;
   try {
     const payload = {
       model,
@@ -327,7 +325,7 @@ const combinedPrompt = historyText ? `${historyText}\n\nNEW LAB: ${textToSend}` 
           role: m.sender === 'user' ? 'user' : 'assistant',
           content: m.text
         })),
-        { role: 'user', content: combinedPrompt }
+        { role: 'user', content: textToSend.trim() }
       ],
       temperature: 0.2
     };
@@ -379,7 +377,7 @@ const combinedPrompt = historyText ? `${historyText}\n\nNEW LAB: ${textToSend}` 
       setSelectedPatient(prev => ({
         ...prev,
         labs: [...(prev?.labs || []), labEntry]
-      }));
+      }))
     }
     } catch (err) {
     console.error('OpenAI API error:', err);
@@ -464,16 +462,16 @@ const triggerMILOAnalysis = async () => {
       ? `REFERENCE LAB HISTORY:\n\n${oldTexts.join("\n\n---\n\n")}`
       : '';
 
-    const combinedPrompt = contextBlock
+    const combined = contextBlock
   ? `${contextBlock}\n\nNEW LAB REPORT:\n\n${newText}`
   : newText;
 
-const cleaned = cleanLabText(combinedPrompt);
+    const cleaned = cleanLabText(combined);
 
-console.log("🧼 Cleaned MILO input preview:", cleaned.slice(0, 500));
-console.log("📏 Cleaned input length:", cleaned.length);
+    console.log("🧼 Cleaned MILO input preview:", cleaned.slice(0, 500));
+    console.log("📏 Cleaned input length:", cleaned.length);
 
-await sendMessage(cleaned, 'lab');
+    await sendMessage(cleaned, 'lab');
   } catch (err) {
     console.error("🧨 Error during multi-file analysis:", err);
     alert("Something went wrong analyzing the files.");
@@ -502,12 +500,6 @@ const handleRunMILO = async () => {
 
     // 🧼 Clean the input before sending to OpenAI
     const cleaned = cleanLabText(combined);
-    // In App.js sendMessage
-const history = await getPatientHistory(selectedPatient.id);
-const historyText = history.map(h => `Date: ${h.date}\nValues: ${JSON.stringify(h)}`).join('\n\n');
-const combinedPrompt = historyText ? `${historyText}\n\nNEW LAB: ${textToSend}` : textToSend;
-
-// Then use combinedPrompt in messages
 
     // 🔍 Debug info
     console.log("🧼 Cleaned MILO input preview:", cleaned.slice(0, 500));
@@ -974,7 +966,7 @@ setVisiblePreviews(prev => ({ ...prev, ...newDropPreviews }));
       })
     );
     setMultiFiles(prev => [...prev, ...processed]);
-    const newInputPreviews = {};
+const newInputPreviews = {};
 processed.forEach((_, idx) => {
   const fileIndex = multiFiles.length + idx;
   newInputPreviews['multi_' + fileIndex] = false;
