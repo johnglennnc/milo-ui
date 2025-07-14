@@ -8,6 +8,7 @@ import { buildSystemPrompt } from './utils/miloPrompt';
 import { extractTextFromImagePDF } from './utils/ocrReader';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from './firebase';
+import { getPatientHistory } from './firebase';
 import { saveLabResult } from './firebase'; // Add at top
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from './firebase';
@@ -314,6 +315,9 @@ function validateMILOResponse(text) {
   const hormoneHeader = (h) => mentioned.has(h) ? `- **${h}**: Include if present.` : '';
   const systemPrompt = buildSystemPrompt(selectedPatient?.name);
 
+  const history = await getPatientHistory(selectedPatient.id);
+const historyText = history.map(h => `Date: ${h.date}\nValues: ${JSON.stringify(h)}`).join('\n\n');
+const combinedPrompt = historyText ? `${historyText}\n\nNEW LAB: ${textToSend}` : textToSend;
   try {
     const payload = {
       model,
