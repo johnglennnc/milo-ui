@@ -1102,20 +1102,30 @@ setVisiblePreviews(prev => ({ ...prev, ...newInputPreviews }));
 
     {!selectedPatient ? (
       <>
-        <p className="text-sm text-gray-400 mb-4">Loaded {patients.length} patients</p>
-        <button
-  onClick={() => setPatientMode('create') || setActiveTab('lab')}
-  className="mb-4 text-sm text-blue-400 hover:underline"
->
-  + New Patient
-</button>
-        <input
-          type="text"
-          placeholder="Search patients..."
-          className="mb-3 bg-gray-900 border border-gray-600 rounded px-3 py-2 w-full md:w-1/2 text-white"
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-        />
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+          <p className="text-sm text-gray-400 mb-2 md:mb-0">
+            Loaded {patients.length} patients
+          </p>
+          <div className="flex w-full md:w-auto gap-2">
+            <input
+              type="text"
+              placeholder="Search patients..."
+              className="bg-gray-900 border border-gray-600 rounded px-3 py-2 w-full md:w-72 text-white"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
+            <button
+              onClick={() => {
+                setPatientMode('create');
+                setActiveTab('lab');
+              }}
+              className="text-sm text-blue-400 hover:underline whitespace-nowrap"
+            >
+              + New Patient
+            </button>
+          </div>
+        </div>
+
         <ul className="space-y-2">
           {patients
             .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -1128,7 +1138,9 @@ setVisiblePreviews(prev => ({ ...prev, ...newInputPreviews }));
                 <span>
                   <strong>{p.name}</strong> — {p.dob || 'DOB N/A'}
                 </span>
-                <span className="text-sm text-gray-400">{(p.labs?.length || 0)} uploads</span>
+                <span className="text-sm text-gray-400">
+                  {(p.labs?.length || 0)} uploads
+                </span>
               </li>
             ))}
         </ul>
