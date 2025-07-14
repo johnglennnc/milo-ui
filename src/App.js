@@ -8,8 +8,7 @@ import { buildSystemPrompt } from './utils/miloPrompt';
 import { extractTextFromImagePDF } from './utils/ocrReader';
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from './firebase';
-import { getPatientHistory } from './firebase';
-import { saveLabResult } from './firebase';
+import { getPatientHistory, saveLabResult } from './firebase';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { db } from './firebase';
 import {
@@ -316,6 +315,10 @@ function validateMILOResponse(text) {
   const hormoneHeader = (h) => mentioned.has(h) ? `- **${h}**: Include if present.` : '';
   const systemPrompt = buildSystemPrompt(selectedPatient?.name);
 
+  const history = await getPatientHistory(selectedPatient.id);
+  const historyText = history.map(h => `Date: ${h.date}\nValues: ${JSON.stringify(h)}`).join('\n\n');
+  const combinedPrompt = historyText ? `${historyText}\n\nNEW LAB: ${textToSend}` : textToSend;
+
   try {
     const payload = {
       model,
@@ -325,7 +328,7 @@ function validateMILOResponse(text) {
           role: m.sender === 'user' ? 'user' : 'assistant',
           content: m.text
         })),
-        { role: 'user', content: textToSend.trim() }
+        { role: 'user', content: combinedPrompt }
       ],
       temperature: 0.2
     };
@@ -379,7 +382,7 @@ function validateMILOResponse(text) {
         labs: [...(prev?.labs || []), labEntry]
       }))
     }
-    } catch (err) {
+  } catch (err) {
     console.error('OpenAI API error:', err);
     setMessagesForTab(prev => [
       ...prev,
@@ -389,11 +392,6 @@ function validateMILOResponse(text) {
     setLoading(false);
   }
 };
-
-
-
-
-
 
   const handleFileUpload = async (e) => {
   const files = Array.from(e.target.files || []);
@@ -406,10 +404,10 @@ function validateMILOResponse(text) {
     try {
       let extractedText = '';
       if (file.type === 'application/pdf') {
-  extractedText = await extractTextHybrid(file); // ✅ Use your actual extractor
-} else {
-  extractedText = await file.text();
-}
+        extractedText = await extractTextHybrid(file); // ✅ Use your actual extractor
+      } else {
+        extractedText = await file.text();
+      }
 
       newEntries.push({
         name: file.name,
@@ -966,7 +964,7 @@ setVisiblePreviews(prev => ({ ...prev, ...newDropPreviews }));
       })
     );
     setMultiFiles(prev => [...prev, ...processed]);
-const newInputPreviews = {};
+    const newInputPreviews = {};
 processed.forEach((_, idx) => {
   const fileIndex = multiFiles.length + idx;
   newInputPreviews['multi_' + fileIndex] = false;
